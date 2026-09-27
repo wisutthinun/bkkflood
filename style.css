@@ -2014,6 +2014,805 @@ body {
 }
 
 /* ==========================================================================
+   UPSTREAM SURGE & SEA HIGH TIDE FORECAST
+   ========================================================================== */
+.surge-overview-wrap {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 992px) {
+  .surge-overview-wrap {
+    grid-template-columns: 1fr;
+  }
+}
+
+.surge-overview-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(14, 116, 144, 0.2) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.surge-ov-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.surge-ov-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.98rem;
+  color: #38bdf8;
+}
+
+.badge-surge-status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.badge-surge-status.status-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.badge-surge-status.status-critical {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.surge-ov-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .surge-ov-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.surge-discharge-stat {
+  background: rgba(15, 23, 42, 0.6);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.number-big {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: -0.5px;
+}
+
+.number-unit {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-left: 4px;
+}
+
+.stat-caption {
+  font-size: 0.76rem;
+  color: #cbd5e1;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.surge-gauge-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.surge-gauge-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8 0%, #fbbf24 70%, #ef4444 100%);
+  border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.gauge-limit {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.surge-ov-desc {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.surge-note-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 4px;
+}
+
+.surge-note-text {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.55;
+  margin-bottom: 8px;
+}
+
+.surge-update-time {
+  font-size: 0.72rem;
+  color: #38bdf8;
+  font-weight: 500;
+}
+
+/* Convergence Peak Alert Banner */
+.convergence-banner {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.convergence-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #ef4444;
+}
+
+.convergence-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.convergence-pill {
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.convergence-time {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fca5a5;
+}
+
+.convergence-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+
+.convergence-text {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+/* Subheadings */
+.surge-section-subhead {
+  margin-bottom: 0.85rem;
+}
+
+.surge-section-subhead h4 {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.subhead-meta {
+  font-size: 0.74rem;
+  color: #94a3b8;
+}
+
+/* Checkpoint Grid & Cards */
+.surge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 992px) {
+  .surge-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checkpoint-card {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(56, 75, 112, 0.4);
+  border-radius: 10px;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.checkpoint-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.6);
+}
+
+.checkpoint-card.critical {
+  border-top: 3px solid #ef4444;
+}
+
+.checkpoint-card.warning {
+  border-top: 3px solid #f59e0b;
+}
+
+.cp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.85rem;
+  gap: 8px;
+}
+
+.cp-station-info {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.cp-code-badge {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+.cp-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 2px;
+}
+
+.cp-location {
+  font-size: 0.74rem;
+  color: #94a3b8;
+}
+
+.cp-status-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.cp-status-badge.badge-critical {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.cp-status-badge.badge-warning {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.cp-stat-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.cp-stat-box {
+  background: rgba(15, 23, 42, 0.6);
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-lbl {
+  font-size: 0.68rem;
+  color: #94a3b8;
+}
+
+.stat-val {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-top: 2px;
+}
+
+.stat-val.highlight-flow {
+  color: #38bdf8;
+}
+
+.stat-val .unit {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-weight: normal;
+}
+
+.stat-sub {
+  font-size: 0.65rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.cp-meter-wrap {
+  margin-bottom: 0.85rem;
+}
+
+.meter-info-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #cbd5e1;
+  margin-bottom: 4px;
+}
+
+.meter-val-text {
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.cp-meter-bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cp-meter-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: #38bdf8;
+}
+
+.cp-meter-fill.warning {
+  background: #f59e0b;
+}
+
+.cp-meter-fill.critical {
+  background: #ef4444;
+}
+
+.cp-meta-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: #cbd5e1;
+}
+
+.cp-trend-item, .cp-time-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Sea High Tide Grid & Cards */
+.tide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 992px) {
+  .tide-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tide-card {
+  background: rgba(30, 41, 59, 0.75);
+  border: 1px solid rgba(56, 75, 112, 0.4);
+  border-radius: 10px;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tide-card.tide-critical {
+  border-top: 3px solid #ef4444;
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, rgba(30, 41, 59, 0.75) 100%);
+}
+
+.tide-card.tide-warning {
+  border-top: 3px solid #f59e0b;
+}
+
+.tide-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+
+.tide-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.tide-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.tide-badge.badge-critical {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.tide-badge.badge-warning {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.tide-level-highlight {
+  background: rgba(15, 23, 42, 0.6);
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 0.85rem;
+  border: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.tide-level-val {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #38bdf8;
+}
+
+.tide-level-unit {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.tide-timings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  margin-bottom: 0.75rem;
+  background: rgba(15, 23, 42, 0.4);
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+}
+
+.timing-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timing-label {
+  color: #94a3b8;
+}
+
+.timing-val {
+  color: #f1f5f9;
+}
+
+.tide-desc {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin-top: auto;
+}
+
+.impact-zones-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+}
+
+.impact-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fbbf24;
+  margin-bottom: 0.5rem;
+}
+
+.impact-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.impact-tag {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+}
+
+/* ==========================================================================
+   LIVE FLOOD NEWS BROADCASTS & SUMMARIES
+   ========================================================================== */
+.live-news-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .live-news-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.live-news-card {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(56, 75, 112, 0.4);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.live-news-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(56, 189, 248, 0.6);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.live-news-card.is-live {
+  border-left: 4px solid #ef4444;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(30, 41, 59, 0.85) 100%);
+}
+
+.live-news-card.is-upcoming {
+  border-left: 4px solid #38bdf8;
+}
+
+.live-news-card.is-ended {
+  border-left: 4px solid #a855f7;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.06) 0%, rgba(30, 41, 59, 0.8) 100%);
+  opacity: 1;
+}
+
+.ln-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.ln-station-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ln-category-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.ln-category-badge.official {
+  background: rgba(14, 165, 233, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(14, 165, 233, 0.4);
+}
+
+.ln-category-badge.news {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.ln-category-badge.traffic {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.ln-station-name {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.live-status-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.live-status-pill.pill-live {
+  background: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.6);
+}
+
+.live-status-pill.pill-upcoming {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.live-status-pill.pill-ended {
+  background: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse-dot 1.2s infinite;
+}
+
+.ln-title-wrap {
+  margin-bottom: 0.85rem;
+}
+
+.ln-program-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 6px;
+  line-height: 1.35;
+}
+
+.ln-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+.ln-speaker strong, .ln-slot strong {
+  color: #cbd5e1;
+}
+
+.ln-summary-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.ln-summary-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 0.5rem;
+}
+
+.ln-bullets {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.ln-bullets li {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.bullet-point {
+  color: #38bdf8;
+  font-weight: bold;
+}
+
+.bullet-text {
+  flex: 1;
+}
+
+.ln-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+
+
+.ln-footer-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: #cbd5e1;
+}
+
+.ln-source-icon {
+  font-size: 0.85rem;
+}
+
+.ln-source-text strong {
+  color: #f1f5f9;
+}
+
+.ln-type-indicator {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* ==========================================================================
    Footer
    ========================================================================== */
 .dashboard-footer {

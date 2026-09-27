@@ -261,6 +261,18 @@ function simulateDataFluctuation() {
     });
   }
 
+  // Upstream surge telemetry micro-fluctuations (C.2, C.13, C.29A)
+  if (dashboardState.data.upstreamWaterSurge && dashboardState.data.upstreamWaterSurge.checkpoints) {
+    dashboardState.data.upstreamWaterSurge.checkpoints.forEach(cp => {
+      const delta = Math.floor(Math.random() * 11) - 5; // -5 to +5 m3/s
+      cp.flowRateM3s = Math.max(1000, (cp.flowRateM3s || cp.dischargeRate || 2200) + delta);
+      cp.dischargeRate = cp.flowRateM3s;
+    });
+    if (dashboardState.data.upstreamWaterSurge.overview && dashboardState.data.upstreamWaterSurge.checkpoints[1]) {
+      dashboardState.data.upstreamWaterSurge.overview.totalDischargeC13 = dashboardState.data.upstreamWaterSurge.checkpoints[1].flowRateM3s;
+    }
+  }
+
   // Dynamic update for Priority Zones Rain Data & PEA Recent Situation Reports
   updatePriorityZonesRainData(dashboardState.lastUpdated);
   updatePeaReportsDynamicData(dashboardState.lastUpdated);
@@ -474,6 +486,8 @@ function renderDashboard() {
   renderCanals();
   renderRoads();
   renderCctvList();
+  renderSurgeAndTide();
+  renderLiveFloodNews();
 }
 
 function renderSummaryMetrics() {
@@ -1180,7 +1194,360 @@ function renderPeaPhotos() {
   }).join("");
 }
 
+// ==========================================================================
+// UPSTREAM WATER SURGE & SEA HIGH TIDE FORECAST (อัปเดตทุก 1 ชม.)
+// ==========================================================================
+function renderSurgeAndTide() {
+  const container = document.getElementById("surge-tide-content");
+  if (!container) return;
 
+  const surge = dashboardState.data.upstreamWaterSurge;
+  const tide = dashboardState.data.seaTideForecast;
+  if (!surge || !tide) {
+    container.innerHTML = `<div style="padding: 1.5rem; text-align: center; color: #94a3b8;">กำลังโหลดข้อมูลคาดการณ์มวลน้ำเหนือและน้ำหนุน...</div>`;
+    return;
+  }
+
+  const now = dashboardState.lastUpdated || new Date();
+  const currentHour = now.getHours();
+  const lastSyncHour = String(currentHour).padStart(2, '0') + ':00 น.';
+  const nextSyncHour = String((currentHour + 1) % 24).padStart(2, '0') + ':00 น.';
+
+  // Update Section Header sync badge if present
+  const surgeSyncEl = document.getElementById("surge-sync-time");
+  if (surgeSyncEl) {
+    surgeSyncEl.innerText = `⏱️ อัปเดตทุก 1 ชม. (รอบล่าสุด: ${lastSyncHour} | รอบถัดไป: ${nextSyncHour})`;
+  }
+
+  const overview = surge.overview || {};
+  const totalDischarge = overview.totalDischargeC13 || surge.totalDischargeC13 || (surge.checkpoints && surge.checkpoints[1] ? surge.checkpoints[1].dischargeRate : 2150);
+  const safeCapacity = overview.safeCapacityThreshold || surge.safeCapacityThreshold || 2500;
+  const statusText = overview.statusText || surge.overallStatusText || "เฝ้าระวังมวลน้ำหลากเพิ่มขึ้นต่อเนื่อง";
+  const overallStatus = overview.status || surge.overallStatus || "warning";
+  const keyNote = overview.keyNote || surge.summaryText || "เขื่อนเจ้าพระยาและจุดวัดน้ำตอนบนมีแนวโน้มการระบายน้ำเพิ่มขึ้นอย่างต่อเนื่อง";
+  const lastUpdated = overview.lastUpdated || surge.lastReported || `${lastSyncHour}`;
+
+  const cp = surge.checkpoints || [];
+  const tidePeriods = tide.tidePeriods || tide.tideWindows || [];
+  const convergence = tide.convergenceWindow || {
+    timeRange: "18:30 - 21:15 น.",
+    title: "ช่วงเวลาน้ำทะเลหนุนสูงสุด ปะทะมวลน้ำเหนือไหลหลาก (Convergence Peak)",
+    warningText: tide.convergenceAlert || "มวลน้ำเหนือปะทะกับน้ำทะเลหนุนสูงสุด ทำให้น้ำระบายลงอ่าวไทยชะลอตัว"
+  };
+
+  const dischargePercent = Math.min(100, Math.round((totalDischarge / safeCapacity) * 100));
+
+  const html = `
+    <!-- Top Overview & Convergence Alert -->
+    <div class="surge-overview-wrap">
+      <div class="surge-overview-card">
+        <div class="surge-ov-header">
+          <div class="surge-ov-tag">
+            <span class="surge-pulse-icon">🌊</span>
+            <strong>สถานการณ์มวลน้ำเหนือ (แม่น้ำเจ้าพระยา)</strong>
+          </div>
+          <span class="badge-surge-status ${overallStatus === 'critical' ? 'status-critical' : 'status-warning'}">
+            ⚠️ ${statusText}
+          </span>
+        </div>
+        
+        <div class="surge-ov-body">
+          <div class="surge-discharge-stat">
+            <div class="stat-number">
+              <span class="number-big">${totalDischarge.toLocaleString()}</span>
+              <span class="number-unit">ลบ.ม./วินาที</span>
+            </div>
+            <div class="stat-caption">อัตราการระบายน้ำปัจจุบัน เขื่อนเจ้าพระยา (เกณฑ์เฝ้าระวัง: ${safeCapacity.toLocaleString()} ลบ.ม./วิ)</div>
+            <div class="surge-gauge-bar">
+              <div class="surge-gauge-fill" style="width: ${dischargePercent}%"></div>
+            </div>
+            <div class="gauge-labels">
+              <span>0</span>
+              <span>1,500</span>
+              <span>2,000</span>
+              <span class="gauge-limit">เกณฑ์เตือนภัย 2,500</span>
+            </div>
+          </div>
+
+          <div class="surge-ov-desc">
+            <div class="surge-note-title">📢 รายงานสรุปสถานการณ์ (อัปเดตทุก 1 ชม.):</div>
+            <p class="surge-note-text">${keyNote}</p>
+            <div class="surge-update-time">⏱️ ข้อมูลโทรมาตรล่าสุด: ${lastUpdated} (รอบถัดไป: ${nextSyncHour})</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Convergence Peak Risk Banner -->
+      <div class="convergence-banner">
+        <div class="convergence-badge-wrap">
+          <span class="convergence-pill">🚨 CONVERGENCE PEAK ALERT</span>
+          <span class="convergence-time">ช่วงเวลาวิกฤต: ${convergence.timeRange}</span>
+        </div>
+        <div class="convergence-title">${convergence.title}</div>
+        <div class="convergence-text">${convergence.warningText}</div>
+      </div>
+    </div>
+
+    <!-- Checkpoint Stations Grid -->
+    <div class="surge-section-subhead">
+      <h4>📍 จุดตรวจวัดและควบคุมมวลน้ำเหนือ 3 ด่านสำคัญก่อนถึง กทม.</h4>
+      <span class="subhead-meta">อัปเดตสถานี C.2 นครสวรรค์, เขื่อนเจ้าพระยา C.13 ชัยนาท, สถานีบางไทร C.29A อยุธยา • ซิงค์ข้อมูลทุก 1 ชม.</span>
+    </div>
+
+    <div class="surge-grid">
+      ${cp.map((station, idx) => {
+        const isCritical = station.status === "critical";
+        const isWarning = station.status === "warning";
+        const badgeClass = isCritical ? "badge-critical" : (isWarning ? "badge-warning" : "badge-normal");
+        const flow = station.flowRateM3s || station.dischargeRate || 0;
+        const critFlow = station.criticalFlowThreshold || station.capacityMax || 3000;
+        const flowPercent = Math.min(100, Math.round((flow / critFlow) * 100));
+        const waterLvl = station.waterLevelM || station.waterLevelMsl || 0;
+        const bankLvl = station.bankLevelM || station.bankHeightMsl || 0;
+        const code = station.stationCode || (idx === 0 ? "C.2" : (idx === 1 ? "C.13" : "C.29A"));
+        const transit = station.timeToBkkText || (station.transitTimeToBkk ? `มวลน้ำใช้เวลาเดินทางถึง กทม. ประมาณ ${station.transitTimeToBkk}` : "มวลน้ำกำลังเคลื่อนตัวเข้าสู่ กทม.");
+
+        return `
+          <div class="checkpoint-card ${station.status}">
+            <div class="cp-header">
+              <div class="cp-station-info">
+                <span class="cp-code-badge">${code}</span>
+                <div>
+                  <h4 class="cp-name">${station.name}</h4>
+                  <div class="cp-location">📍 ${station.location}</div>
+                </div>
+              </div>
+              <span class="cp-status-badge ${badgeClass}">${station.statusLabel || 'เฝ้าระวัง'}</span>
+            </div>
+
+            <div class="cp-body">
+              <div class="cp-stat-row">
+                <div class="cp-stat-box">
+                  <div class="stat-lbl">อัตราการไหล / ระบายน้ำ</div>
+                  <div class="stat-val highlight-flow">
+                    ${flow.toLocaleString()} <span class="unit">ลบ.ม./วิ</span>
+                  </div>
+                  <div class="stat-sub">เกณฑ์วิกฤต: ${critFlow.toLocaleString()} ลบ.ม./วิ</div>
+                </div>
+
+                <div class="cp-stat-box">
+                  <div class="stat-lbl">ระดับน้ำจริง / ระดับตลิ่ง</div>
+                  <div class="stat-val">
+                    ${waterLvl.toFixed(2)} <span class="unit">ม.รทก.</span>
+                  </div>
+                  <div class="stat-sub">ระดับตลิ่ง: ${bankLvl.toFixed(2)} ม.รทก.</div>
+                </div>
+              </div>
+
+              <!-- Gauge Meter -->
+              <div class="cp-meter-wrap">
+                <div class="meter-info-line">
+                  <span>ความจุทางน้ำที่ใช้งาน</span>
+                  <span class="meter-val-text">${flowPercent}%</span>
+                </div>
+                <div class="cp-meter-bar">
+                  <div class="cp-meter-fill ${station.status}" style="width: ${flowPercent}%"></div>
+                </div>
+              </div>
+
+              <!-- Trend and Transit Time -->
+              <div class="cp-meta-footer">
+                <div class="cp-trend-item">
+                  <span class="trend-icon">📈</span>
+                  <span><strong>แนวโน้ม:</strong> ${station.trendText || 'ทรงตัวสูง'}</span>
+                </div>
+                <div class="cp-time-item">
+                  <span class="time-icon">⏱️</span>
+                  <span><strong>ระยะเวลาสู่ กทม.:</strong> ${transit}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+
+    <!-- Sea High Tide Forecast -->
+    <div class="surge-section-subhead" style="margin-top: 1.75rem;">
+      <h4>🌊 พยากรณ์ระดับน้ำทะเลหนุนสูง ปากแม่น้ำเจ้าพระยา (ป้อมพระจุลฯ - กองทัพเรือ)</h4>
+      <span class="subhead-meta">แหล่งข้อมูล: ${tide.source} • ประจำวันที่ ${tide.tideDate || tide.date} • ซิงค์ทุก 1 ชม.</span>
+    </div>
+
+    <div class="tide-grid">
+      ${tidePeriods.map(tp => {
+        const isCrit = tp.riskLevel === "critical";
+        const isWarn = tp.riskLevel === "warning";
+        const tideClass = isCrit ? "tide-critical" : (isWarn ? "tide-warning" : "tide-normal");
+
+        return `
+          <div class="tide-card ${tideClass}">
+            <div class="tide-card-head">
+              <div class="tide-card-title">${tp.title}</div>
+              <span class="tide-badge ${isCrit ? 'badge-critical' : 'badge-warning'}">${tp.riskLabel}</span>
+            </div>
+
+            <div class="tide-card-body">
+              <div class="tide-level-highlight">
+                <div class="tide-level-val">+${tp.expectedLevel.toFixed(2)}</div>
+                <div class="tide-level-unit">เมตร จากระดับน้ำทะเลปานกลาง (ม.รทก.)</div>
+              </div>
+
+              <div class="tide-timings">
+                <div class="timing-item">
+                  <span class="timing-label">ช่วงเวลาหนุนสูง:</span>
+                  <span class="timing-val">⏰ ${tp.timeRange}</span>
+                </div>
+                <div class="timing-item">
+                  <span class="timing-label">จุดสูงสุด (Peak):</span>
+                  <span class="timing-val">🚨 <strong>${tp.peakTime}</strong></span>
+                </div>
+              </div>
+
+              <div class="tide-desc">
+                ${tp.description}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+
+    <!-- Impacted Zones Tags -->
+    <div class="impact-zones-box">
+      <div class="impact-title">⚠️ โซนเสี่ยงได้รับผลกระทบจากน้ำทะเลหนุนสูงร่วมกับน้ำเหนือ:</div>
+      <div class="impact-tags">
+        ${(tide.impactZones || []).map(zone => `<span class="impact-tag">📍 ${zone}</span>`).join("")}
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+// ==========================================================================
+// LIVE FLOOD NEWS BROADCASTS & SUMMARIES (ย้อนหลัง 3 ชม. • อัปเดตทุก 1 ชม.)
+// ==========================================================================
+function renderLiveFloodNews() {
+  const container = document.getElementById("live-news-grid");
+  if (!container) return;
+
+  const newsList = dashboardState.data.liveFloodNews;
+  if (!newsList || newsList.length === 0) return;
+
+  const now = dashboardState.lastUpdated || new Date();
+  const currentHour = now.getHours();
+  const lastSyncHour = String(currentHour).padStart(2, '0') + ':00 น.';
+  const nextSyncHour = String((currentHour + 1) % 24).padStart(2, '0') + ':00 น.';
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+
+  let liveCount = 0;
+  let recentCount = 0;
+
+  const cardsHtml = newsList.map(item => {
+    let isLive = false;
+    let badgeHtml = "";
+    let statusClass = "";
+    let timeSlotText = "";
+
+    if (item.isAlwaysLive) {
+      isLive = true;
+      liveCount++;
+      statusClass = "is-live";
+      badgeHtml = `<span class="live-status-pill pill-live"><span class="pulse-dot"></span> 🔴 ถ่ายทอดสดตลอด 24 ชม.</span>`;
+      timeSlotText = `ถ่ายทอดสดต่อเนื่องตลอด 24 ชม.`;
+    } else {
+      // Calculate dynamic start and end timestamps relative to base time
+      const offsetStart = typeof item.offsetStartMins === 'number' ? item.offsetStartMins : -30;
+      const offsetEnd = typeof item.offsetEndMins === 'number' ? item.offsetEndMins : 30;
+
+      const startTime = new Date(now.getTime() + offsetStart * 60 * 1000);
+      const endTime = new Date(now.getTime() + offsetEnd * 60 * 1000);
+
+      const startStr = String(startTime.getHours()).padStart(2, '0') + ':' + String(startTime.getMinutes()).padStart(2, '0') + ' น.';
+      const endStr = String(endTime.getHours()).padStart(2, '0') + ':' + String(endTime.getMinutes()).padStart(2, '0') + ' น.';
+
+      if (offsetEnd > 0) {
+        // Currently ongoing Live broadcast!
+        isLive = true;
+        liveCount++;
+        statusClass = "is-live";
+        const minsElapsed = Math.abs(offsetStart);
+        badgeHtml = `<span class="live-status-pill pill-live"><span class="pulse-dot"></span> 🔴 กำลังถ่ายทอดสด (LIVE NOW)</span>`;
+        timeSlotText = `${startStr} - ${endStr} (ออกอากาศสดมาแล้ว ${minsElapsed} นาที)`;
+      } else {
+        // Broadcast ended within the last 3 hours!
+        recentCount++;
+        statusClass = "is-ended";
+        const minsAgo = Math.abs(offsetEnd);
+        const hrsAgo = Math.floor(minsAgo / 60);
+        const remMins = minsAgo % 60;
+        const agoStr = hrsAgo > 0 ? `${hrsAgo} ชม. ${remMins > 0 ? remMins + ' นาที' : ''}` : `${minsAgo} นาที`;
+
+        badgeHtml = `<span class="live-status-pill pill-ended">📹 Live จบไป ${agoStr}ที่แล้ว (ช่วง 3 ชม. ล่าสุด)</span>`;
+        timeSlotText = `ออกอากาศเมื่อ ${startStr} - ${endStr} (${agoStr}ที่แล้ว)`;
+      }
+    }
+
+    return `
+      <div class="live-news-card ${statusClass}">
+        <div class="ln-header">
+          <div class="ln-station-wrap">
+            <span class="ln-category-badge ${item.category}">${item.categoryLabel}</span>
+            <div class="ln-station-name">${item.station}</div>
+          </div>
+          <div class="ln-status-wrap">
+            ${badgeHtml}
+          </div>
+        </div>
+
+        <div class="ln-title-wrap">
+          <h4 class="ln-program-name">${item.programName}</h4>
+          <div class="ln-meta-row">
+            <span class="ln-speaker">🎙️ <strong>ผู้ดำเนินรายการ / รายงาน:</strong> ${item.speaker}</span>
+            <span class="ln-slot">⏰ <strong>ผังเวลา:</strong> ${timeSlotText}</span>
+          </div>
+        </div>
+
+        <div class="ln-summary-box">
+          <div class="ln-summary-title">
+            <span>📝 ประเด็นสำคัญและสถานการณ์ล่าสุด (SitRep):</span>
+          </div>
+          <ul class="ln-bullets">
+            ${item.summaryBullets.map(bullet => `
+              <li>
+                <span class="bullet-point">▸</span>
+                <span class="bullet-text">${bullet}</span>
+              </li>
+            `).join("")}
+          </ul>
+        </div>
+
+        <div class="ln-footer">
+          <div class="ln-footer-source">
+            <span class="ln-source-icon">📡</span>
+            <span class="ln-source-text">แหล่งเผยแพร่: <strong>${item.station}</strong></span>
+          </div>
+          <span class="ln-type-indicator">
+            ${item.embedType === 'youtube-live' ? '▶ รายงานสดผ่าน YouTube' : (item.embedType === 'facebook-live' ? '🔷 แถลงการณ์สดผ่าน Facebook' : (item.embedType === 'tv-live' ? '📺 ออกอากาศสดทางโทรทัศน์' : '📻 รายงานสดทางวิทยุจราจร'))}
+          </span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = cardsHtml;
+
+  const counterEl = document.getElementById("live-news-counter");
+  if (counterEl) {
+    counterEl.innerText = `${liveCount} รายการสดเรียลไทม์ • ${recentCount} รายการสดช่วง 3 ชม. (อัปเดตทุก 1 ชม.)`;
+  }
+
+  const clockEl = document.getElementById("live-news-clock");
+  if (clockEl) {
+    clockEl.innerText = `⏱️ เวลาปัจจุบัน: ${hh}:${mm} น. (รอบอัปเดต: ${lastSyncHour} | รอบถัดไป: ${nextSyncHour})`;
+  }
+}
 
 // ==========================================================================
 // Chart.js Historical Trend
@@ -1299,6 +1666,16 @@ function initApp() {
   try { startCctvRenderLoops(); } catch (e) { console.error("startCctvRenderLoops error:", e); }
   try { initTrendChart(); } catch (e) { console.warn("Chart init failed (safe to ignore if offline):", e); }
   try { setupAutoRefresh(300); } catch (e) { console.error("setupAutoRefresh error:", e); }
+
+  // 1-Hour Auto-Sync for Live News and Upstream Surge & Sea Tide Forecast
+  try {
+    setInterval(() => {
+      dashboardState.lastUpdated = new Date();
+      simulateDataFluctuation();
+      renderSurgeAndTide();
+      renderLiveFloodNews();
+    }, 3600 * 1000);
+  } catch (e) { console.error("hourlyAutoSync error:", e); }
 }
 
 if (document.readyState === "loading") {
