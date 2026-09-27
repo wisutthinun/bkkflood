@@ -46,9 +46,10 @@
         <div class="auto-refresh-selector">
           <span>⏱️ รีเฟรชอัตโนมัติ:</span>
           <select id="auto-refresh-select">
-            <option value="15">ทุก 15 วินาที</option>
-            <option value="30" selected>ทุก 30 วินาที</option>
+            <option value="300" selected>ทุก 5 นาที (ค่าเริ่มต้น)</option>
             <option value="60">ทุก 1 นาที</option>
+            <option value="30">ทุก 30 วินาที</option>
+            <option value="15">ทุก 15 วินาที</option>
             <option value="0">ปิด (Manual)</option>
           </select>
         </div>
@@ -130,10 +131,7 @@
       <div class="priority-header">
         <div class="priority-title-wrap">
           <span class="priority-badge">PINNED TOP</span>
-          <h2 class="priority-title">🚨 โซนเฝ้าระวังพิเศษสูงสุด (Priority Focus Zones)</h2>
-        </div>
-        <div class="priority-subtitle">
-          งามวงศ์วาน • ประชาชื่น • แจ้งวัฒนะ • ม.เกษตรศาสตร์ • อ.เมือง นนทบุรี
+          <h2 class="priority-title">งามวงศ์วาน • ประชาชื่น • แจ้งวัฒนะ • ม.เกษตรศาสตร์ • อ.เมือง นนทบุรี • ชุมชนชินเขต</h2>
         </div>
       </div>
 
@@ -151,6 +149,9 @@
       <div class="nav-tabs">
         <button class="tab-btn active" data-tab="overview">
           <span>📊 ภาพรวมทั้งหมด</span>
+        </button>
+        <button class="tab-btn" data-tab="pea-photos">
+          <span>📢 รายงานรอบ กฟภ. สนง.ใหญ่ (1 ชม.)</span>
         </button>
         <button class="tab-btn" data-tab="floodhub">
           <span>🌐 เตือนภัย Google Flood Hub</span>
@@ -294,6 +295,36 @@
         </div>
       </div>
       <div class="canals-grid" id="canals-list">
+        <!-- Dynamically rendered by app.js -->
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION: RECENT SITUATION REPORTS AROUND PEA HQ (รายงานสถานการณ์ล่าสุดรอบ กฟภ. สำนักงานใหญ่ ภายใน 1 ชม.)
+         ==================================================================== -->
+    <div class="section-panel active" id="panel-pea-photos">
+      <div class="section-head pea-section-head">
+        <div>
+          <div class="pea-title-badge-wrap">
+            <span class="pea-brand-badge">
+              <span class="pea-brand-icon">⚡</span>
+              <strong>การไฟฟ้าส่วนภูมิภาค (PEA) สำนักงานใหญ่</strong>
+              <span class="pea-live-pill">🔴 REAL-TIME REPORT (1 ชม.)</span>
+            </span>
+            <span class="pea-lead-time">⏱️ อัปเดตล่าสุดทุก 5 นาที</span>
+          </div>
+          <h3 class="section-title" style="margin-top: 0.35rem;">📢 รายงานสถานการณ์น้ำท่วมล่าสุดภายใน 1 ชม. บริเวณโดยรอบ กฟภ. สำนักงานใหญ่</h3>
+          <div class="section-subtitle">
+            รายงานสรุปสภาพน้ำท่วมขังและผิวทางสดจากเจ้าหน้าที่ กฟภ., เครือข่ายชุมชนชินเขต 1-2, อาสากู้ภัย และประชาชนในพื้นที่
+          </div>
+        </div>
+        <div class="pea-header-actions">
+          <span class="pea-counter-badge" id="pea-photos-count">6 รายงานสถานการณ์ล่าสุด</span>
+        </div>
+      </div>
+
+      <!-- Situation Reports Grid -->
+      <div class="pea-reports-grid" id="pea-photos-grid">
         <!-- Dynamically rendered by app.js -->
       </div>
     </div>

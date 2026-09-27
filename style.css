@@ -1793,6 +1793,204 @@ body {
 }
 
 /* ==========================================================================
+   SECTION: PEA HQ RECENT SITUATION REPORTS (รายงานสถานการณ์ล่าสุดรอบ กฟภ. สนง.ใหญ่)
+   ========================================================================== */
+.pea-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.pea-title-badge-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.pea-brand-badge {
+  background: rgba(147, 51, 234, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #e9d5ff;
+}
+
+.pea-brand-icon {
+  font-size: 1rem;
+}
+
+.pea-live-pill {
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  letter-spacing: 0.04em;
+  animation: pulse 1.8s infinite;
+}
+
+.pea-lead-time {
+  font-size: 0.75rem;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.1);
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+}
+
+.pea-counter-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #d8b4fe;
+  background: rgba(147, 51, 234, 0.18);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  padding: 5px 14px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pea-reports-grid,
+.pea-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 1.25rem;
+}
+
+.pea-report-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 14px;
+  padding: 1.25rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.pea-report-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(192, 132, 252, 0.6);
+  box-shadow: 0 10px 25px rgba(147, 51, 234, 0.18);
+}
+
+.pea-report-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pea-report-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: #f1f5f9;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-weight: 500;
+}
+
+.pea-report-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pea-report-badge.critical {
+  background: rgba(239, 68, 68, 0.92);
+}
+
+.pea-report-badge.moderate {
+  background: rgba(245, 158, 11, 0.92);
+}
+
+.pea-report-badge.minor {
+  background: rgba(16, 185, 129, 0.92);
+}
+
+.pea-report-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.4;
+}
+
+.pea-report-loc {
+  font-size: 0.8rem;
+  color: #c084fc;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+}
+
+.pea-report-desc {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.55;
+  background: rgba(15, 23, 42, 0.45);
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  border-left: 3px solid rgba(168, 85, 247, 0.7);
+}
+
+.pea-report-passable {
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #e2e8f0;
+  background: rgba(30, 41, 59, 0.6);
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pea-report-footer {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.74rem;
+  color: #94a3b8;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pea-reporter-tag {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #c084fc;
+  font-weight: 500;
+}
+
+/* ==========================================================================
    Footer
    ========================================================================== */
 .dashboard-footer {
@@ -1825,7 +2023,7 @@ body {
   .priority-grid {
     grid-template-columns: 1fr;
   }
-  .canals-grid, .roads-grid, .cctv-grid, .gfh-stations-grid {
+  .canals-grid, .roads-grid, .cctv-grid, .gfh-stations-grid, .pea-photos-grid, .pea-reports-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -200,6 +200,45 @@ const INITIAL_DATA = {
         peakDate: "29 ก.ย.",
         forecastSummary: "โมเดล AI พยากรณ์แม่น้ำเจ้าพระยาเอ่อล้นนอกคันกั้นน้ำท่าน้ำนนท์ช่วงน้ำหนุนสูงสุด"
       }
+    },
+    {
+      id: "chinkhet",
+      name: "โซนชุมชนชินเขต",
+      province: "กทม. / หลักสี่-จตุจักร",
+      status: "warning",
+      statusText: "เฝ้าระวัง - น้ำรอการระบายในซอยย่อย",
+      roadFloodLevel: 18, // cm
+      roadCondition: "มีน้ำท่วมขังในซอยชินเขต 1 (งามวงศ์วาน 43) และซอยชินเขต 2 (งามวงศ์วาน 47) ระดับ 15-18 ซม. โดยเฉพาะช่วงแยก 6-8 รถเล็กควรชะลอความเร็ว",
+      keyLocation: "ซอยชินเขต 1-2 (งามวงศ์วาน 43/47) - ชุมชนร่วมใจพัฒนา - ใกล้ สนง.ใหญ่ การไฟฟ้าส่วนภูมิภาค (PEA)",
+      canalName: "คลองเปรมประชากร / ลำรางสาธารณะชินเขต",
+      canalLevel: 1.46, // ม.รทก.
+      canalMaxLevel: 1.50,
+      canalCapacityPercent: 92,
+      cctvId: "cctv-pea-chinkhet",
+      cctvName: "หน้า สนง.ใหญ่ การไฟฟ้าส่วนภูมิภาค (PEA) / ปากซอยชินเขต",
+      cctvSecondary: "ซอยชินเขต 2 (งามวงศ์วาน 47)",
+      cctvSecondaryId: "cctv-chinkhet-2",
+      coordinates: [13.8542, 100.5518],
+      advice: "แนะนำเลี่ยงเข้าซอยย่อยชินเขต 2 แยก 6-8 ซึ่งเป็นแอ่งกระทะ ให้ใช้ถนนสายหลักงามวงศ์วานหรือเลียบคลองประปา",
+      trend: "stable",
+      rainfall: {
+        accumulated24h: 108.5, // มม.
+        isRaining: true,
+        intensity: "ฝนตกปานกลาง",
+        intensityLevel: "moderate",
+        startTime: "05:35 น.",
+        durationText: "ตกมาแล้ว 2 ชม. 25 นาที",
+        durationMinutes: 145,
+        stoppedTime: null,
+        radarForecast: "กลุ่มฝนกำลังเคลื่อนตัวไปทางทิศตะวันออกเฉียงเหนือ คาดเบาบางลงใน 30 นาที"
+      },
+      googleFloodHubAlert: {
+        riskLevel: "danger",
+        riskLabel: "อันตราย (Danger)",
+        probability: 84,
+        peakDate: "28 - 29 ก.ย.",
+        forecastSummary: "โมเดล AI พยากรณ์คลองเปรมประชากรช่วงชินเขต-กฟภ. น้ำทรงตัวสูง ระบายออกช้า"
+      }
     }
   ],
 
@@ -594,6 +633,25 @@ const INITIAL_DATA = {
       type: "real_stream"
     },
     {
+      id: "cctv-pea-chinkhet",
+      name: "ถ.งามวงศ์วาน หน้า สนง.ใหญ่ การไฟฟ้าส่วนภูมิภาค (PEA)",
+      zone: "ชุมชนชินเขต / PEA",
+      province: "กทม.",
+      road: "ถนนงามวงศ์วาน (หน้าสำนักงานใหญ่ กฟภ. / ปากซอยชินเขต 1)",
+      direction: "มุ่งหน้าแยกพงษ์เพชร / แคราย",
+      status: "online",
+      fps: 30,
+      hasFlood: true,
+      floodLevelCm: 14,
+      vehicleDensity: "ชะลอตัวช่วงหน้า กฟภ. ปากซอยชินเขต 1",
+      coordinates: [13.8542, 100.5518],
+      agency: "การไฟฟ้าส่วนภูมิภาค (PEA) / สจร. กทม.",
+      streamVideoUrl: "https://assets.mixkit.co/videos/preview/mixkit-traffic-flowing-on-a-highway-42476-large.mp4",
+      realSnapshotUrl: "https://images.weserv.nl/?url=cameras.iticfoundation.org/api/jpeg2.php?camid=1",
+      officialWebUrl: "http://traffic.bangkok.go.th/",
+      type: "real_stream"
+    },
+    {
       id: "cctv-chaengwattana-1",
       name: "ถ.แจ้งวัฒนะ หน้าศูนย์ราชการ",
       zone: "แจ้งวัฒนะ",
@@ -906,5 +964,113 @@ const INITIAL_DATA = {
       inputs: "ดาวเทียมสภาพอากาศ ECMWF, ภาพถ่ายเรดาร์ตรวจวัดน้ำฝน Sentinel, และข้อมูลสถานีวัดน้ำจริง",
       advantages: "คาดการณ์ล่วงหน้า 7 วัน (7-Day Lead Time) ช่วยให้ประชาชนและหน่วยงานเตรียมความพร้อมได้ทันท่วงทีก่อนเกิดเหตุน้ำท่วมจริง"
     }
-  }
+  },
+
+  // ========================================================================
+  // ภาพรายงานสถานการณ์ที่แชร์ล่าสุดภายใน 1 ชม. บริเวณโดยรอบ การไฟฟ้าส่วนภูมิภาค (PEA) & ชุมชนชินเขต
+  // ========================================================================
+  peaRecentPhotos: [
+    {
+      id: "photo-pea-1",
+      title: "หน้าสำนักงานใหญ่ การไฟฟ้าส่วนภูมิภาค (PEA) ประตู 1",
+      location: "ถ.งามวงศ์วาน หน้า สนง.ใหญ่ กฟภ. ประตู 1",
+      timeAgo: "8 นาทีที่แล้ว",
+      minutesAgo: 8,
+      sharedTime: "09:58 น.",
+      reporter: "เจ้าหน้าที่ กฟภ. ศูนย์ความปลอดภัย",
+      reporterRole: "เจ้าหน้าที่องค์กร",
+      waterDepthCm: 12,
+      severity: "moderate",
+      severityLabel: "น้ำท่วมเลนซ้าย",
+      passable: "รถทุกชนิดผ่านได้ ชะลอความเร็ว",
+      description: "ช่องทางคู่ขนานหน้าสำนักงานใหญ่ กฟภ. มีน้ำขังผิวจราจรเลนซ้ายประมาณ 10-12 ซม. เลนขวาและช่องทางด่วนสัญจรได้คล่องตัว เดินเครื่องสูบน้ำช่วยระบายต่อเนื่อง",
+      imageUrl: "https://images.unsplash.com/photo-1547683905-f686c993aae5?w=800&auto=format&fit=crop&q=80",
+      source: "ศูนย์ประสานงานฉุกเฉิน กฟภ. สำนักงานใหญ่"
+    },
+    {
+      id: "photo-pea-2",
+      title: "ปากซอยชินเขต 1 (งามวงศ์วาน 43)",
+      location: "ปากซอยงามวงศ์วาน 43 เชื่อมถนนใหญ่",
+      timeAgo: "16 นาทีที่แล้ว",
+      minutesAgo: 16,
+      sharedTime: "09:50 น.",
+      reporter: "ประชาชนในพื้นที่ (คุณสมชาย)",
+      reporterRole: "รายงานจากประชาชน",
+      waterDepthCm: 15,
+      severity: "moderate",
+      severityLabel: "น้ำท่วมผิวทาง",
+      passable: "รถเก๋งผ่านได้ช้า มอเตอร์ไซค์ชิดขวา",
+      description: "ปากซอยชินเขต 1 มีน้ำท่วมขังเสมอทางเท้าประมาณ 15 ซม. รถเลี้ยวเข้าซอยต้องชะลอ มีคลื่นน้ำเล็กน้อยเวลาเปิดทาง",
+      imageUrl: "https://images.unsplash.com/photo-1515694346937-94d85e41e6f0?w=800&auto=format&fit=crop&q=80",
+      source: "กลุ่มไลน์เตือนภัยชุมชนชินเขต-งามวงศ์วาน"
+    },
+    {
+      id: "photo-pea-3",
+      title: "ซอยชินเขต 2 (งามวงศ์วาน 47) หน้าตลาดชินเขต",
+      location: "ซอยงามวงศ์วาน 47 หน้าตลาดและร้านค้าชุมชน",
+      timeAgo: "25 นาทีที่แล้ว",
+      minutesAgo: 25,
+      sharedTime: "09:41 น.",
+      reporter: "พ่อค้าแม่ค้าตลาดชินเขต",
+      reporterRole: "ผู้ประกอบการชุมชน",
+      waterDepthCm: 18,
+      severity: "critical",
+      severityLabel: "น้ำเอ่อท่วมขัง",
+      passable: "รถเล็กหลีกเลี่ยง รถกระบะผ่านได้",
+      description: "บริเวณหน้าตลาดชินเขต 2 น้ำท่วมขังทั้ง 2 เลน สูงประมาณครึ่งล้อรถเก๋ง (18 ซม.) ผู้ค้าเตรียมกระสอบทรายกั้นหน้าร้านแล้ว",
+      imageUrl: "https://images.unsplash.com/photo-1519692933481-e162a57d6721?w=800&auto=format&fit=crop&q=80",
+      source: "เพจข่าวสารชุมชนชินเขต"
+    },
+    {
+      id: "photo-pea-4",
+      title: "สะพานข้ามคลองเปรมประชากร (ข้าง สนง.ใหญ่ กฟภ.)",
+      location: "จุดเชื่อมต่อ ถ.งามวงศ์วาน ข้ามคลองเปรมประชากร",
+      timeAgo: "34 นาทีที่แล้ว",
+      minutesAgo: 34,
+      sharedTime: "09:32 น.",
+      reporter: "อาสากู้ภัยป่อเต็กตึ๊ง จุดพงษ์เพชร",
+      reporterRole: "อาสาสมัครกู้ภัย",
+      waterDepthCm: 8,
+      severity: "minor",
+      severityLabel: "น้ำปริ่มขอบทาง",
+      passable: "ผ่านได้ทุกช่องทาง",
+      description: "คลองเปรมประชากรข้าง สนง.ใหญ่ กฟภ. น้ำขึ้นสูงเกือบเสมอขอบเขื่อนระบายน้ำ มีน้ำเอ่อล้นเข้าขอบผิวจราจรเชิงสะพานเล็กน้อย",
+      imageUrl: "https://images.unsplash.com/photo-1534274988757-a28bf1a57c17?w=800&auto=format&fit=crop&q=80",
+      source: "ศูนย์วิทยุอาสาสมัครกู้ภัย"
+    },
+    {
+      id: "photo-pea-5",
+      title: "จุดกลับรถใต้สะพานงามวงศ์วาน ใกล้สถานีไฟฟ้าย่อย กฟภ.",
+      location: "จุดกลับรถใต้สะพานข้ามแยกพงษ์เพชร (ฝั่ง กฟภ.)",
+      timeAgo: "46 นาทีที่แล้ว",
+      minutesAgo: 46,
+      sharedTime: "09:20 น.",
+      reporter: "ผู้ใช้เส้นทาง (Twitter/X)",
+      reporterRole: "ผู้ใช้เส้นทาง",
+      waterDepthCm: 22,
+      severity: "critical",
+      severityLabel: "น้ำท่วมสูงห้ามผ่าน",
+      passable: "รถเล็กห้ามผ่านเด็ดขาด",
+      description: "จุดกลับรถใต้สะพานระดับน้ำท่วมขัง 20-22 ซม. มีรถจอดเสีย 1 คัน เจ้าหน้าที่ตำรวจจราจรนำกรวยมาปิดกั้นช่องทางกลับรถชั่วคราว",
+      imageUrl: "https://images.unsplash.com/photo-1508873696983-2df57046475a?w=800&auto=format&fit=crop&q=80",
+      source: "รายงานสภาพจราจร จส.100"
+    },
+    {
+      id: "photo-pea-6",
+      title: "ซอยงามวงศ์วาน 47 แยก 6 (ชุมชนชินเขต 2 เชื่อมคลองบางเขน)",
+      location: "ท้ายซอยชินเขต 2 เชื่อมต่อแนวคลองบางเขน",
+      timeAgo: "54 นาทีที่แล้ว",
+      minutesAgo: 54,
+      sharedTime: "09:12 น.",
+      reporter: "กรรมการชุมชนร่วมใจชินเขต",
+      reporterRole: "ตัวแทนชุมชน",
+      waterDepthCm: 16,
+      severity: "moderate",
+      severityLabel: "น้ำหนุนจากคลอง",
+      passable: "รถยกสูงผ่านได้",
+      description: "ระดับน้ำในลำรางสาธารณะและคลองระบายน้ำสูงขึ้น ส่งผลให้น้ำดันขึ้นตามท่อระบายน้ำภายในซอยย่อย เทศบาลติดตั้งเครื่องสูบน้ำเร่งระบายแล้ว",
+      imageUrl: "https://images.unsplash.com/photo-1428592953211-077101b2021b?w=800&auto=format&fit=crop&q=80",
+      source: "ศูนย์ประสานงานชุมชนชินเขต"
+    }
+  ]
 };

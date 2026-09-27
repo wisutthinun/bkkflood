@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
   try { renderDashboard(); } catch (e) { console.error("renderDashboard error:", e); }
   try { startCctvRenderLoops(); } catch (e) { console.error("startCctvRenderLoops error:", e); }
   try { initTrendChart(); } catch (e) { console.warn("Chart init failed (safe to ignore if offline):", e); }
-  try { setupAutoRefresh(30); } catch (e) { console.error("setupAutoRefresh error:", e); }
+  try { setupAutoRefresh(300); } catch (e) { console.error("setupAutoRefresh error:", e); }
 });
 
 // ==========================================================================
@@ -111,6 +111,16 @@ function simulateDataFluctuation() {
       st.probability = Math.min(99, Math.max(30, st.probability + delta));
     });
   }
+
+  // Micro-fluctuation for PEA Recent Photos
+  if (dashboardState.data.peaRecentPhotos) {
+    dashboardState.data.peaRecentPhotos.forEach(p => {
+      if (p.waterDepthCm > 0) {
+        const delta = Math.floor(Math.random() * 3) - 1;
+        p.waterDepthCm = Math.max(0, p.waterDepthCm + delta);
+      }
+    });
+  }
 }
 
 function setupAutoRefresh(seconds) {
@@ -171,7 +181,8 @@ function initEventListeners() {
     autoSelect.addEventListener("change", (e) => {
       const val = parseInt(e.target.value, 10);
       setupAutoRefresh(val);
-      showNotification(`ตั้งค่าอัปเดตอัตโนมัติ: ${val === 0 ? "ปิด" : `ทุก ${val} วินาที`}`);
+      const label = val === 0 ? "ปิด" : (val >= 60 ? `ทุก ${val / 60} นาที` : `ทุก ${val} วินาที`);
+      showNotification(`ตั้งค่าอัปเดตอัตโนมัติ: ${label}`);
     });
   }
 
@@ -214,7 +225,7 @@ function initEventListeners() {
     });
   }
 
-  // Modal Close
+  // CCTV Modal Close
   const modalClose = document.getElementById("modal-cctv-close");
   const modalOverlay = document.getElementById("modal-cctv");
   if (modalClose) {
@@ -228,7 +239,9 @@ function initEventListeners() {
 
   // ESC key to close modal
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeModal();
+    if (e.key === "Escape") {
+      closeModal();
+    }
   });
 }
 
@@ -263,6 +276,7 @@ function switchTab(tabKey) {
 function renderDashboard() {
   renderSummaryMetrics();
   renderTopPriorityZones();
+  renderPeaPhotos();
   renderGoogleFloodHub();
   renderCanals();
   renderRoads();
@@ -907,6 +921,64 @@ function closeModal() {
   const modal = document.getElementById("modal-cctv");
   if (modal) modal.classList.remove("active");
   dashboardState.activeModalCctvId = null;
+}
+
+// ==========================================================================
+// PEA HQ Situation Reports (รายงานสถานการณ์ล่าสุดรอบ กฟภ. สำนักงานใหญ่ ภายใน 1 ชม.)
+// ==========================================================================
+function renderPeaPhotos() {
+  const container = document.getElementById("pea-photos-grid");
+  const countEl = document.getElementById("pea-photos-count");
+  if (!container) return;
+
+  const reports = dashboardState.data.peaRecentPhotos || [];
+  if (countEl) {
+    countEl.innerText = `${reports.length} รายงานสถานการณ์ล่าสุด`;
+  }
+
+  if (reports.length === 0) {
+    container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #94a3b8;">ไม่มีรายงานสถานการณ์ล่าสุดในขณะนี้</div>`;
+    return;
+  }
+
+  container.innerHTML = reports.map(r => {
+    let badgeClass = "minor";
+    if (r.severity === "critical") badgeClass = "critical";
+    else if (r.severity === "moderate") badgeClass = "moderate";
+
+    return `
+      <div class="pea-report-card">
+        <div class="pea-report-top">
+          <span class="pea-report-time">
+            ⏱️ <strong>${r.timeAgo}</strong> (${r.sharedTime})
+          </span>
+          <span class="pea-report-badge ${badgeClass}">
+            💧 ระดับน้ำ ${r.waterDepthCm} ซม. (${r.severityLabel})
+          </span>
+        </div>
+        <div>
+          <div class="pea-report-title">📍 ${r.title}</div>
+          <div class="pea-report-loc">${r.location}</div>
+        </div>
+        <div class="pea-report-desc">
+          ${r.description}
+        </div>
+        <div>
+          <span class="pea-report-passable">
+            🚗 <strong>สภาพการสัญจร:</strong> ${r.passable}
+          </span>
+        </div>
+        <div class="pea-report-footer">
+          <div class="pea-reporter-tag">
+            👤 ${r.reporter} (${r.reporterRole})
+          </div>
+          <div title="แหล่งข้อมูลที่ได้รับการยืนยัน">
+            🏢 ${r.source}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 
