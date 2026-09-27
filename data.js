@@ -1,0 +1,716 @@
+/**
+ * ข้อมูลสถานการณ์น้ำ คลอง ถนน และกล้องวงจรปิด (กทม. นนทบุรี ปทุมธานี)
+ * ให้ความสำคัญเป็นพิเศษกับโซน: งามวงศ์วาน, ประชาชื่น, แจ้งวัฒนะ, ม.เกษตรศาสตร์
+ */
+
+const INITIAL_DATA = {
+  // โซนพิเศษที่ปักหมุดไว้ด้านบนสุด
+  priorityZones: [
+    {
+      id: "ngamwongwan",
+      name: "โซนงามวงศ์วาน",
+      province: "นนทบุรี / กทม.",
+      status: "critical", // normal, warning, critical
+      statusText: "วิกฤต - มีน้ำท่วมขังรอการระบาย",
+      roadFloodLevel: 25, // cm
+      roadCondition: "ท่วมช่องทางซ้ายและกลาง 2-3 เลน (ระดับน้ำ 20-25 ซม.) รถเล็กโปรดหลีกเลี่ยง",
+      keyLocation: "แยกพงษ์เพชร - หน้าเดอะมอลล์งามวงศ์วาน - ใต้ทางด่วน",
+      canalName: "คลองบางเขน (ช่วงงามวงศ์วาน) / คลองเปรมประชากร",
+      canalLevel: 1.45, // ม.รทก.
+      canalMaxLevel: 1.50,
+      canalCapacityPercent: 96,
+      cctvId: "cctv-ngamwongwan-1",
+      cctvName: "แยกพงษ์เพชร (ถ.งามวงศ์วาน)",
+      cctvSecondary: "หน้าเดอะมอลล์งามวงศ์วาน",
+      cctvSecondaryId: "cctv-ngamwongwan-2",
+      coordinates: [13.8584, 100.5435],
+      advice: "แนะนำเลี่ยงใช้สะพานข้ามแยกพงษ์เพชร หรือใช้เส้นทางรัตนาธิเบศร์ทดแทน",
+      trend: "up", // up, stable, down
+      rainfall: {
+        accumulated24h: 112.5, // มม.
+        isRaining: true,
+        intensity: "ฝนตกปานกลาง",
+        intensityLevel: "moderate", // heavy, moderate, light, none
+        startTime: "05:40 น.",
+        durationText: "ตกมาแล้ว 2 ชม. 20 นาที",
+        durationMinutes: 140,
+        stoppedTime: null,
+        radarForecast: "คาดว่ากลุ่มฝนจะเคลื่อนตัวผ่านพ้นช่วงเวลา 08:45 น."
+      }
+    },
+    {
+      id: "prachachuen",
+      name: "โซนประชาชื่น",
+      province: "กทม. / นนทบุรี",
+      status: "warning",
+      statusText: "เตือนภัย - น้ำปริ่มขอบทางเท้า",
+      roadFloodLevel: 15, // cm
+      roadCondition: "มีน้ำท่วมขังผิวจราจร 1-2 เลนซ้าย ช่วงแยกประชานุกูลและเลียบคลองประปา",
+      keyLocation: "แยกประชานุกูล - ถนนเลียบคลองประปา - ประชาชื่น 30",
+      canalName: "คลองประปา (สถานีบางซื่อ-ประชาชื่น) / คลองบางเขน",
+      canalLevel: 1.28,
+      canalMaxLevel: 1.60,
+      canalCapacityPercent: 80,
+      cctvId: "cctv-prachachuen-1",
+      cctvName: "แยกประชานุกูล (ถ.ประชาชื่น)",
+      cctvSecondary: "ถนนเลียบคลองประปา (ตัดงามวงศ์วาน)",
+      cctvSecondaryId: "cctv-prachachuen-2",
+      coordinates: [13.8342, 100.5372],
+      advice: "รถเล็กสัญจรได้ด้วยความระมัดระวัง ใช้ช่องทางขวาสุด ชะลอความเร็ว",
+      trend: "stable",
+      rainfall: {
+        accumulated24h: 89.0, // มม.
+        isRaining: false,
+        intensity: "ฝนหยุดตกแล้ว",
+        intensityLevel: "none",
+        startTime: "05:15 น.",
+        durationText: "ตกต่อเนื่องรวม 2 ชม. 25 นาที",
+        durationMinutes: 145,
+        stoppedTime: "07:40 น.",
+        radarForecast: "กลุ่มฝนสลายตัวแล้ว ไม่มีเมฆฝนใหม่เข้าพื้นที่"
+      }
+    },
+    {
+      id: "chaengwattana",
+      name: "โซนแจ้งวัฒนะ",
+      province: "นนทบุรี / กทม.",
+      status: "critical",
+      statusText: "วิกฤต - น้ำท่วมสูงหลายจุด",
+      roadFloodLevel: 30, // cm
+      roadCondition: "น้ำท่วมขัง 2-3 เลน ช่วงหน้าศูนย์ราชการ วงเวียนหลักสี่ และหน้าเซ็นทรัล",
+      keyLocation: "หน้าศูนย์ราชการเฉลิมพระเกียรติ - วงเวียนหลักสี่ - ปากเกร็ด",
+      canalName: "คลองบางตลาด / คลองเปรมประชากร (ช่วงแจ้งวัฒนะ)",
+      canalLevel: 1.68,
+      canalMaxLevel: 1.70,
+      canalCapacityPercent: 98,
+      cctvId: "cctv-chaengwattana-1",
+      cctvName: "ถ.แจ้งวัฒนะ หน้าศูนย์ราชการ",
+      cctvSecondary: "วงเวียนหลักสี่ (มุ่งหน้าแจ้งวัฒนะ)",
+      cctvSecondaryId: "cctv-chaengwattana-2",
+      coordinates: [13.8893, 100.5654],
+      advice: "รถเก๋งขนาดเล็กห้ามผ่าน มีเครื่องสูบน้ำขนาดใหญ่กำลังเร่งระบายลงคลองบางตลาด",
+      trend: "up",
+      rainfall: {
+        accumulated24h: 135.0, // มม. (สูงสุด)
+        isRaining: true,
+        intensity: "ฝนตกหนักต่อเนื่อง",
+        intensityLevel: "heavy",
+        startTime: "05:10 น.",
+        durationText: "ตกมาแล้ว 2 ชม. 50 นาที",
+        durationMinutes: 170,
+        stoppedTime: null,
+        radarForecast: "กลุ่มฝนฟ้าคะนองหนาแน่น คาดตกต่อเนื่องอีกอย่างน้อย 45 นาที"
+      }
+    },
+    {
+      id: "kasetsart",
+      name: "โซน ม.เกษตรศาสตร์",
+      province: "กทม.",
+      status: "warning",
+      statusText: "เตือนภัย - น้ำขังหน้าประตูงามวงศ์วาน",
+      roadFloodLevel: 18, // cm
+      roadCondition: "น้ำท่วมเลนคู่ขนานหน้าประตู 1 และ 2 งามวงศ์วาน และใต้อุโมงค์เกษตรมีน้ำรอระบาย",
+      keyLocation: "แยกเกษตร - ประตู 1-3 ถ.งามวงศ์วาน - ถ.พหลโยธินหน้า มก.",
+      canalName: "คลองบางเขน (ช่วง ม.เกษตร) / คลองบางบัว",
+      canalLevel: 1.35,
+      canalMaxLevel: 1.60,
+      canalCapacityPercent: 84,
+      cctvId: "cctv-kasetsart-1",
+      cctvName: "แยกเกษตรศาสตร์ (ถ.งามวงศ์วานตัดพหลโยธิน)",
+      cctvSecondary: "ถ.งามวงศ์วาน ประตู 1 ม.เกษตรฯ",
+      cctvSecondaryId: "cctv-kasetsart-2",
+      coordinates: [13.8447, 100.5731],
+      advice: "แนะนำเข้า-ออก มหาวิทยาลัยผ่านประตูพหลโยธินและวิภาวดีรังสิตแทน",
+      trend: "down",
+      rainfall: {
+        accumulated24h: 94.5, // มม.
+        isRaining: true,
+        intensity: "ฝนปรอยๆ เบาบาง",
+        intensityLevel: "light",
+        startTime: "05:50 น.",
+        durationText: "ตกมาแล้ว 2 ชม. 10 นาที",
+        durationMinutes: 130,
+        stoppedTime: null,
+        radarForecast: "เมฆฝนเริ่มเบาบาง คาดว่าจะหยุดตกในอีก 15-20 นาที"
+      }
+    },
+    {
+      id: "muang-nonthaburi",
+      name: "โซน อ.เมือง นนทบุรี",
+      province: "นนทบุรี",
+      status: "warning",
+      statusText: "เฝ้าระวัง - น้ำหนุนและน้ำรอระบาย",
+      roadFloodLevel: 16, // cm
+      roadCondition: "มีน้ำท่วมขังผิวจราจร 1 เลนซ้ายช่วงแยกแคราย และบริเวณท่าน้ำนนท์มีน้ำเอ่อล้นรอการระบาย",
+      keyLocation: "สี่แยกแคราย - ถ.รัตนาธิเบศร์ - ท่าน้ำนนท์ - สะพานพระนั่งเกล้า",
+      canalName: "แม่น้ำเจ้าพระยา (ท่าน้ำนนท์) / คลองบางใหญ่",
+      canalLevel: 1.58, // ม.รทก.
+      canalMaxLevel: 1.80,
+      canalCapacityPercent: 88,
+      cctvId: "cctv-nonthaburi-khaerai",
+      cctvName: "สี่แยกแคราย (รัตนาธิเบศร์-ติวานนท์)",
+      cctvSecondary: "ท่าน้ำนนทบุรี (หอนาฬิกา)",
+      cctvSecondaryId: "cctv-nonthaburi-pier",
+      coordinates: [13.8589, 100.5183],
+      advice: "ระมัดระวังช่วงน้ำทะเลหนุนสูง ท่าน้ำนนท์และแยกแครายควรชะลอความเร็ว",
+      trend: "up",
+      rainfall: {
+        accumulated24h: 104.0, // มม.
+        isRaining: true,
+        intensity: "ฝนตกปานกลาง",
+        intensityLevel: "moderate",
+        startTime: "05:30 น.",
+        durationText: "ตกมาแล้ว 2 ชม. 35 นาที",
+        durationMinutes: 155,
+        stoppedTime: null,
+        radarForecast: "กลุ่มฝนยังคงปกคลุมเขตเทศบาลนครนนทบุรี คาดเบาบางลงหลัง 09:00 น."
+      }
+    }
+  ],
+
+  // ข้อมูลระดับน้ำในคลอง (กรุงเทพฯ นนทบุรี ปทุมธานี)
+  canals: [
+    {
+      id: "canal-prem-thewasunthorn",
+      name: "คลองเปรมประชากร",
+      station: "สถานีวัดน้ำวัดเทวสุนทร (เขตจตุจักร)",
+      province: "กทม.",
+      zone: "งามวงศ์วาน / ม.เกษตร",
+      currentLevel: 1.48, // ม.รทก.
+      warningLevel: 1.30,
+      criticalLevel: 1.50,
+      capacityPercent: 98,
+      status: "critical", // normal, watch, warning, critical
+      statusLabel: "วิกฤตล้นตลิ่ง",
+      flowRate: "18.5 ลบ.ม./วินาที (เดินเครื่องสูบน้ำ 4 เครื่อง)",
+      trend: "up",
+      coordinates: [13.8491, 100.5621]
+    },
+    {
+      id: "canal-bangkhen-ngamwongwan",
+      name: "คลองบางเขน",
+      station: "สถานีประตูระบายน้ำคลองบางเขน (งามวงศ์วาน-พงษ์เพชร)",
+      province: "นนทบุรี",
+      zone: "งามวงศ์วาน",
+      currentLevel: 1.42,
+      warningLevel: 1.25,
+      criticalLevel: 1.45,
+      capacityPercent: 95,
+      status: "critical",
+      statusLabel: "วิกฤตเฝ้าระวังสูง",
+      flowRate: "14.2 ลบ.ม./วินาที (เปิดประตูน้ำ 80%)",
+      trend: "up",
+      coordinates: [13.8569, 100.5402]
+    },
+    {
+      id: "canal-prapa-samsen",
+      name: "คลองประปา",
+      station: "สถานีวัดระดับน้ำคลองประปา (ช่วงแยกประชานุกูล-ประชาชื่น)",
+      province: "กทม.",
+      zone: "ประชาชื่น",
+      currentLevel: 1.28,
+      warningLevel: 1.35,
+      criticalLevel: 1.60,
+      capacityPercent: 80,
+      status: "warning",
+      statusLabel: "ระดับเตือนภัย",
+      flowRate: "ระดับน้ำควบคุมของการประปานครหลวง",
+      trend: "stable",
+      coordinates: [13.8365, 100.5369]
+    },
+    {
+      id: "canal-bangtalad-chaengwattana",
+      name: "คลองบางตลาด",
+      station: "สถานีระบายน้ำคลองบางตลาด (ปากเกร็ด-แจ้งวัฒนะ)",
+      province: "นนทบุรี",
+      zone: "แจ้งวัฒนะ",
+      currentLevel: 1.68,
+      warningLevel: 1.40,
+      criticalLevel: 1.70,
+      capacityPercent: 98,
+      status: "critical",
+      statusLabel: "วิกฤตล้นตลิ่ง",
+      flowRate: "22.0 ลบ.ม./วินาที (สูบน้ำเต็มกำลัง)",
+      trend: "up",
+      coordinates: [13.8942, 100.5284]
+    },
+    {
+      id: "canal-bangbua-kaset",
+      name: "คลองบางบัว",
+      station: "สถานีวัดน้ำคลองบางบัว (สะพานพหลโยธิน-ม.เกษตร)",
+      province: "กทม.",
+      zone: "ม.เกษตร",
+      currentLevel: 1.35,
+      warningLevel: 1.30,
+      criticalLevel: 1.55,
+      capacityPercent: 87,
+      status: "warning",
+      statusLabel: "เฝ้าระวัง",
+      flowRate: "12.8 ลบ.ม./วินาที",
+      trend: "down",
+      coordinates: [13.8572, 100.5891]
+    },
+    {
+      id: "canal-rangsit-prathum",
+      name: "คลองรังสิตประยูรศักดิ์",
+      station: "สถานีสูบน้ำกึ่งถาวรปากคลองรังสิตฯ (ปทุมธานี)",
+      province: "ปทุมธานี",
+      zone: "ปทุมธานี-รังสิต",
+      currentLevel: 1.82,
+      warningLevel: 1.60,
+      criticalLevel: 1.90,
+      capacityPercent: 95,
+      status: "critical",
+      statusLabel: "ระดับวิกฤต",
+      flowRate: "65.0 ลบ.ม./วินาที (เดินเครื่องสูบน้ำจุฬาลงกรณ์)",
+      trend: "up",
+      coordinates: [13.9872, 100.6053]
+    },
+    {
+      id: "canal-ladprao-chokchai4",
+      name: "คลองลาดพร้าว",
+      station: "สถานีวัดน้ำคลองลาดพร้าว (ช่วงวัดลาดพร้าว-โชคชัย 4)",
+      province: "กทม.",
+      zone: "กทม. ชั้นใน",
+      currentLevel: 0.95,
+      warningLevel: 1.10,
+      criticalLevel: 1.35,
+      capacityPercent: 70,
+      status: "watch",
+      statusLabel: "ปกติ-ค่อนข้างสูง",
+      flowRate: "16.4 ลบ.ม./วินาที",
+      trend: "down",
+      coordinates: [13.8055, 100.5898]
+    },
+    {
+      id: "canal-saensaep-bangsun",
+      name: "คลองแสนแสบ",
+      station: "สถานีประตูระบายน้ำสระปทุม (ปทุมวัน-บางกะปิ)",
+      province: "กทม.",
+      zone: "กทม. กลาง",
+      currentLevel: -0.15,
+      warningLevel: 0.30,
+      criticalLevel: 0.60,
+      capacityPercent: 55,
+      status: "normal",
+      statusLabel: "ระดับปกติ",
+      flowRate: "28.0 ลบ.ม./วินาที (เดินเรือตามปกติ)",
+      trend: "stable",
+      coordinates: [13.7482, 100.5321]
+    },
+    {
+      id: "canal-bangyai-nonthaburi",
+      name: "คลองบางใหญ่",
+      station: "สถานีประตูระบายน้ำคลองบางใหญ่ (นนทบุรี)",
+      province: "นนทบุรี",
+      zone: "นนทบุรี ตะวันตก",
+      currentLevel: 1.25,
+      warningLevel: 1.30,
+      criticalLevel: 1.55,
+      capacityPercent: 80,
+      status: "watch",
+      statusLabel: "เฝ้าระวัง",
+      flowRate: "10.5 ลบ.ม./วินาที",
+      trend: "stable",
+      coordinates: [13.8423, 100.4125]
+    },
+    {
+      id: "canal-chiangrak-pathum",
+      name: "คลองเชียงรากใหญ่",
+      station: "สถานีประตูระบายน้ำเชียงราก (สามโคก-เมืองปทุม)",
+      province: "ปทุมธานี",
+      zone: "ปทุมธานี เหนือ",
+      currentLevel: 1.55,
+      warningLevel: 1.50,
+      criticalLevel: 1.80,
+      capacityPercent: 86,
+      status: "warning",
+      statusLabel: "เตือนภัย",
+      flowRate: "35.2 ลบ.ม./วินาที",
+      trend: "up",
+      coordinates: [14.0531, 100.5289]
+    }
+  ],
+
+  // ข้อมูลระดับน้ำตามถนนต่างๆ
+  roads: [
+    {
+      id: "road-ngamwongwan-pongphet",
+      roadName: "ถนนงามวงศ์วาน",
+      location: "สี่แยกพงษ์เพชร - หน้าเดอะมอลล์งามวงศ์วาน",
+      province: "นนทบุรี / กทม.",
+      zone: "งามวงศ์วาน",
+      floodDepth: 25, // ซม.
+      affectedLanes: "2-3 เลนซ้าย และช่องทางคู่ขนาน",
+      severity: "critical", // normal, minor, moderate, critical
+      severityLabel: "น้ำท่วมสูง (วิกฤต)",
+      vehicleAdvice: "รถเล็ก รถเก๋ง มอเตอร์ไซค์ ห้ามผ่านเด็ดขาด",
+      cause: "ฝนตกสะสมต่อเนื่อง คลองบางเขนระบายน้ำไม่ทัน",
+      pumpsActive: 6,
+      drainageStatus: "กำลังเร่งเดินเครื่องสูบน้ำเคลื่อนที่ 6 เครื่อง",
+      coordinates: [13.8584, 100.5435]
+    },
+    {
+      id: "road-prachachuen-prachanukul",
+      roadName: "ถนนประชาชื่น",
+      location: "สี่แยกประชานุกูล - ประชาชื่น 30",
+      province: "กทม.",
+      zone: "ประชาชื่น",
+      floodDepth: 15,
+      affectedLanes: "1-2 เลนซ้าย (ชิดทางเท้า)",
+      severity: "moderate",
+      severityLabel: "น้ำท่วมปานกลาง",
+      vehicleAdvice: "รถเล็กผ่านได้ด้วยความระมัดระวัง แนะนำใช้เลนขวา",
+      cause: "น้ำจากคลองประปาปริ่มขอบคันกั้นน้ำ",
+      pumpsActive: 4,
+      drainageStatus: "ระดับน้ำเริ่มทรงตัว คาดแห้งใน 1 ชั่วโมงหากไม่มีฝนเพิ่ม",
+      coordinates: [13.8342, 100.5372]
+    },
+    {
+      id: "road-chaengwattana-gov",
+      roadName: "ถนนแจ้งวัฒนะ",
+      location: "หน้าศูนย์ราชการเฉลิมพระเกียรติ - กรมการกงสุล",
+      province: "กทม. / นนทบุรี",
+      zone: "แจ้งวัฒนะ",
+      floodDepth: 30,
+      affectedLanes: "ท่วมเต็มผิวจราจรทุกช่องทาง (ทั้งฝั่งขาเข้า-ขาออก)",
+      severity: "critical",
+      severityLabel: "วิกฤตระดับสูงสุด",
+      vehicleAdvice: "ห้ามรถทุกชนิดสัญจรผ่าน (ระดับน้ำถึงท้องรถ)",
+      cause: "น้ำหนุนจากคลองเปรมประชากรและคลองบางตลาดล้นท่วมผิวทาง",
+      pumpsActive: 8,
+      drainageStatus: "ระดมรถสูบน้ำแรงดันสูงของ ปภ. 8 คันเร่งผลักดันน้ำ",
+      coordinates: [13.8893, 100.5654]
+    },
+    {
+      id: "road-kasetsart-ngamwongwan",
+      roadName: "ถนนงามวงศ์วาน (หน้า ม.เกษตรศาสตร์)",
+      location: "แยกเกษตรศาสตร์ - ประตู 1 มหาวิทยาลัยเกษตรศาสตร์",
+      province: "กทม.",
+      zone: "ม.เกษตร",
+      floodDepth: 18,
+      affectedLanes: "เลนซ้ายสุดและช่องทางคู่ขนาน 1 เลน",
+      severity: "moderate",
+      severityLabel: "น้ำท่วมปานกลาง",
+      vehicleAdvice: "รถเล็กโปรดชะลอความเร็ว หลีกเลี่ยงเลนซ้าย",
+      cause: "ท่อระบายน้ำบริเวณประตู 1 ม.เกษตรฯ ระบายช้า",
+      pumpsActive: 3,
+      drainageStatus: "เครื่องสูบน้ำเทศบาลทำงานต่อเนื่อง ระดับน้ำลดลงชั่วโมงละ 2 ซม.",
+      coordinates: [13.8447, 100.5731]
+    },
+    {
+      id: "road-vibhavadi-laksi",
+      roadName: "ถนนวิภาวดีรังสิต",
+      location: "ห้าแยกลาดพร้าว - สี่แยกหลักสี่ (ช่วงคลองบางซื่อ)",
+      province: "กทม.",
+      zone: "กทม. ตอนเหนือ",
+      floodDepth: 10,
+      affectedLanes: "ทางคู่ขนานฝั่งขาออก บริเวณป้ายรถเมล์",
+      severity: "minor",
+      severityLabel: "น้ำรอการระบาย",
+      vehicleAdvice: "สัญจรผ่านได้ทุกช่องทาง ชะลอความเร็วเลนคู่ขนาน",
+      cause: "ฝนตกสะสม น้ำระบายลงท่อช้าช่วงชั่วโมงเร่งด่วน",
+      pumpsActive: 2,
+      drainageStatus: "เปิดบานประตูระบายน้ำคลองบางซื่อเต็มที่",
+      coordinates: [13.8643, 100.5821]
+    },
+    {
+      id: "road-rattanathibet-non",
+      roadName: "ถนนรัตนาธิเบศร์",
+      location: "แยกแคราย - เชิงสะพานพระนั่งเกล้า",
+      province: "นนทบุรี",
+      zone: "นนทบุรี",
+      floodDepth: 12,
+      affectedLanes: "ช่องทางซ้ายสุด 1 เลน",
+      severity: "minor",
+      severityLabel: "น้ำรอการระบาย",
+      vehicleAdvice: "รถทุกประเภทผ่านได้ปกติ",
+      cause: "น้ำขังบริเวณจุดกลับรถใต้สะพาน",
+      pumpsActive: 2,
+      drainageStatus: "เจ้าหน้าที่เทศบาลนครนนทบุรีกำลังกวาดเศษขยะอุดตันท่อ",
+      coordinates: [13.8611, 100.4855]
+    },
+    {
+      id: "road-tiwanon-pakred",
+      roadName: "ถนนติวานนท์",
+      location: "ห้าแยกปากเกร็ด - แยกสวนสมเด็จ",
+      province: "นนทบุรี",
+      zone: "นนทบุรี ตอนเหนือ",
+      floodDepth: 22,
+      affectedLanes: "2 ช่องจราจรฝั่งมุ่งหน้าปทุมธานี",
+      severity: "critical",
+      severityLabel: "น้ำท่วมสูง",
+      vehicleAdvice: "รถเล็กไม่แนะนำให้ผ่าน ชะลอตัวติดขัดท้ายแถวยาว",
+      cause: "ระดับน้ำคลองบ้านใหม่หนุนสูง",
+      pumpsActive: 4,
+      drainageStatus: "ติดตั้งเครื่องสูบน้ำไฮดรอลิกเพิ่ม 2 เครื่อง",
+      coordinates: [13.9167, 100.5052]
+    },
+    {
+      id: "road-phahonyothin-rangsit",
+      roadName: "ถนนพหลโยธิน (รังสิต-ปทุมธานี)",
+      location: "หน้าศูนย์การค้าฟิวเจอร์พาร์ครังสิต - ตลาดสี่มุมเมือง",
+      province: "ปทุมธานี",
+      zone: "ปทุมธานี",
+      floodDepth: 28,
+      affectedLanes: "ช่องทางคู่ขนานท่วมเต็มทุกเลน ช่องทางด่วนมีน้ำขังเลนซ้าย",
+      severity: "critical",
+      severityLabel: "วิกฤตสัญจรลำบาก",
+      vehicleAdvice: "เลี่ยงช่องทางคู่ขนาน ใช้ช่องทางด่วนหรือทางยกระดับโทลล์เวย์",
+      cause: "น้ำจากคลองรังสิตเอ่อล้นเข้าท่อระบายน้ำบนถนน",
+      pumpsActive: 10,
+      drainageStatus: "เทศบาลนครรังสิตเปิดเครื่องสูบน้ำ 10 ตัวระบายลงเจ้าพระยา",
+      coordinates: [13.9892, 100.6175]
+    },
+    {
+      id: "road-lamlukka-pathum",
+      roadName: "ถนนลำลูกกา",
+      location: "ช่วงคลอง 1 - คลอง 3 ลำลูกกา",
+      province: "ปทุมธานี",
+      zone: "ปทุมธานี ตะวันออก",
+      floodDepth: 14,
+      affectedLanes: "1 ช่องทางซ้ายฝั่งขาเข้า",
+      severity: "moderate",
+      severityLabel: "น้ำท่วมปานกลาง",
+      vehicleAdvice: "รถเล็กผ่านได้ด้วยความระมัดระวัง",
+      cause: "น้ำรอการระบายลงคูคลองข้างทาง",
+      pumpsActive: 3,
+      drainageStatus: "เร่งผลักดันน้ำลงสู่คลองหกวา",
+      coordinates: [13.9351, 100.6428]
+    }
+  ],
+
+  // รายการกล้องวงจรปิด CCTV ถนนและจุดตรวจวัด
+  cctvList: [
+    {
+      id: "cctv-ngamwongwan-1",
+      name: "แยกพงษ์เพชร (ถ.งามวงศ์วาน)",
+      zone: "งามวงศ์วาน",
+      province: "นนทบุรี / กทม.",
+      road: "ถ.งามวงศ์วาน ตัด ถ.ประชาชื่น",
+      direction: "มุ่งหน้าแคราย / ทางด่วนงามวงศ์วาน",
+      status: "online",
+      fps: 30,
+      hasFlood: true,
+      floodLevelCm: 25,
+      vehicleDensity: "ติดขัดมาก (ท้ายแถวสะสมถึงแยกเกษตร)",
+      coordinates: [13.8584, 100.5435],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-ngamwongwan-2",
+      name: "หน้าเดอะมอลล์งามวงศ์วาน",
+      zone: "งามวงศ์วาน",
+      province: "นนทบุรี",
+      road: "ถ.งามวงศ์วาน ฝั่งขาออก",
+      direction: "มุ่งหน้าสี่แยกแคราย",
+      status: "online",
+      fps: 25,
+      hasFlood: true,
+      floodLevelCm: 20,
+      vehicleDensity: "ติดขัด รถชะลอตัวลุยน้ำขัง",
+      coordinates: [13.8598, 100.5392],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-prachachuen-1",
+      name: "แยกประชานุกูล (ถ.ประชาชื่น)",
+      zone: "ประชาชื่น",
+      province: "กทม.",
+      road: "ถ.ประชาชื่น ตัด ถ.รัชดาภิเษก",
+      direction: "มุ่งหน้าโรงพยาบาลเกษมราษฎร์",
+      status: "online",
+      fps: 30,
+      hasFlood: true,
+      floodLevelCm: 15,
+      vehicleDensity: "เคลื่อนตัวได้ช้า สลับหยุดนิ่ง",
+      coordinates: [13.8342, 100.5372],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-prachachuen-2",
+      name: "เลียบคลองประปา - งามวงศ์วาน",
+      zone: "ประชาชื่น",
+      province: "นนทบุรี",
+      road: "ถ.เลียบคลองประปา ประชาชื่นนนท์",
+      direction: "มุ่งหน้าแจ้งวัฒนะ",
+      status: "online",
+      fps: 25,
+      hasFlood: false,
+      floodLevelCm: 5,
+      vehicleDensity: "เคลื่อนตัวได้เรื่อยๆ",
+      coordinates: [13.8645, 100.5412],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-chaengwattana-1",
+      name: "ถ.แจ้งวัฒนะ หน้าศูนย์ราชการ",
+      zone: "แจ้งวัฒนะ",
+      province: "กทม.",
+      road: "ถ.แจ้งวัฒนะ อาคารราชบุรีดิเรกฤทธิ์",
+      direction: "มุ่งหน้าวงเวียนหลักสี่",
+      status: "online",
+      fps: 30,
+      hasFlood: true,
+      floodLevelCm: 30,
+      vehicleDensity: "ปิดการจราจรช่องซ้าย รถติดขัดรุนแรง",
+      coordinates: [13.8893, 100.5654],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-chaengwattana-2",
+      name: "วงเวียนหลักสี่ - พหลโยธิน",
+      zone: "แจ้งวัฒนะ",
+      province: "กทม.",
+      road: "ถ.แจ้งวัฒนะ ตัด ถ.พหลโยธินและรามอินทรา",
+      direction: "มุ่งหน้าสะพานใหม่ / บางเขน",
+      status: "online",
+      fps: 30,
+      hasFlood: true,
+      floodLevelCm: 22,
+      vehicleDensity: "ติดขัดสะสมท้ายแถวยาว",
+      coordinates: [13.8745, 100.5978],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-kasetsart-1",
+      name: "แยกเกษตรศาสตร์ (ถ.งามวงศ์วาน-พหลโยธิน)",
+      zone: "ม.เกษตร",
+      province: "กทม.",
+      road: "ทางแยกเกษตรศาสตร์ (หน้า ม.เกษตรฯ)",
+      direction: "มุ่งหน้าถนนประเสริฐมนูกิจ (เกษตร-นวมินทร์)",
+      status: "online",
+      fps: 30,
+      hasFlood: true,
+      floodLevelCm: 18,
+      vehicleDensity: "หนาแน่น เคลื่อนตัวตามสัญญาณไฟ",
+      coordinates: [13.8447, 100.5731],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-kasetsart-2",
+      name: "ประตู 1 มหาวิทยาลัยเกษตรศาสตร์",
+      zone: "ม.เกษตร",
+      province: "กทม.",
+      road: "ถ.งามวงศ์วาน หน้าสำนักพิพิธภัณฑ์ มก.",
+      direction: "มุ่งหน้าวิภาวดีรังสิต",
+      status: "online",
+      fps: 25,
+      hasFlood: true,
+      floodLevelCm: 16,
+      vehicleDensity: "ติดขัดชะลอตัวบริเวณหน้าประตูทางเข้า",
+      coordinates: [13.8478, 100.5684],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-vibhavadi-1",
+      name: "วิภาวดีรังสิต - ด่านดอนเมือง",
+      zone: "กทม. ตอนเหนือ",
+      province: "กทม.",
+      road: "ถ.วิภาวดีรังสิต ทางคู่ขนาน",
+      direction: "มุ่งหน้ารังสิต ปทุมธานี",
+      status: "online",
+      fps: 30,
+      hasFlood: false,
+      floodLevelCm: 8,
+      vehicleDensity: "เคลื่อนตัวได้ดีตามรอบสัญญาณ",
+      coordinates: [13.9123, 100.6015],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-rangsit-future",
+      name: "ฟิวเจอร์พาร์ครังสิต (พหลโยธิน)",
+      zone: "ปทุมธานี",
+      province: "ปทุมธานี",
+      road: "ถ.พหลโยธิน ตัด ถ.รังสิต-นครนายก",
+      direction: "มุ่งหน้าประตูน้ำพระอินทร์ / วังน้อย",
+      status: "online",
+      fps: 30,
+      hasFlood: true,
+      floodLevelCm: 28,
+      vehicleDensity: "ติดขัดรุนแรง น้ำท่วมคู่ขนาน",
+      coordinates: [13.9892, 100.6175],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-nonthaburi-khaerai",
+      name: "สี่แยกแคราย (รัตนาธิเบศร์-ติวานนท์)",
+      zone: "อ.เมือง นนทบุรี",
+      province: "นนทบุรี",
+      road: "ถ.รัตนาธิเบศร์ ตัด ถ.ติวานนท์",
+      direction: "มุ่งหน้าสะพานพระนั่งเกล้า",
+      status: "online",
+      fps: 25,
+      hasFlood: true,
+      floodLevelCm: 14,
+      vehicleDensity: "หนาแน่น เคลื่อนตัวช้า มีน้ำรอระบายเลนซ้าย",
+      coordinates: [13.8589, 100.5183],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-nonthaburi-pier",
+      name: "ท่าน้ำนนทบุรี (หอนาฬิกา)",
+      zone: "อ.เมือง นนทบุรี",
+      province: "นนทบุรี",
+      road: "ถนนประชาราษฎร์ - ท่าน้ำนนท์",
+      direction: "ริมแม่น้ำเจ้าพระยา / ตลาดเทศบาลนนทบุรี",
+      status: "online",
+      fps: 30,
+      hasFlood: true,
+      floodLevelCm: 18,
+      vehicleDensity: "เฝ้าระวังน้ำทะเลหนุนสูง น้ำเอ่อขอบเขื่อน",
+      coordinates: [13.8421, 100.4912],
+      type: "simulation_stream"
+    },
+    {
+      id: "cctv-pathumthani-bridge",
+      name: "สะพานปทุมธานี 1 (แม่น้ำเจ้าพระยา)",
+      zone: "ปทุมธานี",
+      province: "ปทุมธานี",
+      road: "ทางหลวง 346 ข้ามแม่น้ำเจ้าพระยา",
+      direction: "มุ่งหน้าตัวเมืองปทุมธานี",
+      status: "online",
+      fps: 30,
+      hasFlood: false,
+      floodLevelCm: 0,
+      vehicleDensity: "คล่องตัวดี ไม่มีน้ำท่วมขังบนสะพาน",
+      coordinates: [14.0203, 100.5367],
+      type: "simulation_stream"
+    }
+  ],
+
+  // ข้อมูลระดับน้ำย้อนหลัง 24 ชั่วโมง (สำหรับ Chart.js)
+  historicalTrends: {
+    timestamps: [
+      "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", 
+      "20:00", "22:00", "00:00", "02:00", "04:00", "06:00", "ปัจจุบัน"
+    ],
+    series: [
+      {
+        name: "คลองเปรมประชากร (งามวงศ์วาน/มก.)",
+        color: "#ef4444",
+        levels: [0.95, 1.02, 1.10, 1.25, 1.38, 1.45, 1.50, 1.52, 1.49, 1.47, 1.46, 1.47, 1.48]
+      },
+      {
+        name: "คลองบางเขน (งามวงศ์วาน-พงษ์เพชร)",
+        color: "#f97316",
+        levels: [0.88, 0.94, 1.05, 1.20, 1.32, 1.39, 1.43, 1.44, 1.42, 1.40, 1.41, 1.41, 1.42]
+      },
+      {
+        name: "คลองบางตลาด (แจ้งวัฒนะ)",
+        color: "#e11d48",
+        levels: [1.10, 1.18, 1.28, 1.42, 1.55, 1.62, 1.67, 1.69, 1.68, 1.67, 1.66, 1.67, 1.68]
+      },
+      {
+        name: "คลองประปา (ประชาชื่น)",
+        color: "#3b82f6",
+        levels: [1.15, 1.18, 1.20, 1.22, 1.25, 1.27, 1.28, 1.29, 1.28, 1.28, 1.27, 1.28, 1.28]
+      },
+      {
+        name: "คลองรังสิตประยูรศักดิ์ (ปทุมธานี)",
+        color: "#8b5cf6",
+        levels: [1.30, 1.38, 1.48, 1.60, 1.70, 1.76, 1.80, 1.83, 1.82, 1.81, 1.80, 1.81, 1.82]
+      }
+    ]
+  }
+};

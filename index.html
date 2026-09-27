@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบศูนย์ติดตามระดับน้ำและกล้องวงจรปิด (กรุงเทพฯ - นนทบุรี - ปทุมธานี)</title>
+  
+  <!-- Google Fonts: Prompt -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient background lighting -->
+  <div class="bg-ambient"></div>
+
+  <div class="dashboard-wrapper">
+    <!-- ====================================================================
+         TOP HEADER BAR
+         ==================================================================== -->
+    <header class="top-header">
+      <div class="header-brand">
+        <div class="brand-icon">🌊</div>
+        <div class="brand-info">
+          <h1>
+            ศูนย์ติดตามสถานการณ์น้ำและกล้องจราจร
+            <span class="badge-live">LIVE MONITORING</span>
+          </h1>
+          <div class="brand-subtitle">
+            ครอบคลุมพื้นที่ กรุงเทพมหานคร • นนทบุรี • ปทุมธานี
+          </div>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Timestamp Box -->
+        <div class="timestamp-box">
+          <span class="timestamp-label">เวลาที่ดึงข้อมูลล่าสุด</span>
+          <span class="timestamp-val" id="last-updated-val">กำลังโหลด...</span>
+        </div>
+
+        <!-- Auto Refresh Selector -->
+        <div class="auto-refresh-selector">
+          <span>⏱️ รีเฟรชอัตโนมัติ:</span>
+          <select id="auto-refresh-select">
+            <option value="15">ทุก 15 วินาที</option>
+            <option value="30" selected>ทุก 30 วินาที</option>
+            <option value="60">ทุก 1 นาที</option>
+            <option value="0">ปิด (Manual)</option>
+          </select>
+        </div>
+
+        <!-- Manual Refresh Button -->
+        <button class="btn-refresh" id="btn-manual-refresh" title="กดเพื่อดึงข้อมูลสดทันที">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          รีเฟรชข้อมูล (Refresh)
+        </button>
+      </div>
+    </header>
+
+    <!-- ====================================================================
+         SUMMARY KPI METRICS
+         ==================================================================== -->
+    <section class="metrics-row">
+      <div class="metric-card alert-critical">
+        <div class="metric-icon-box metric-icon-critical">🚨</div>
+        <div class="metric-data">
+          <span class="metric-title">จุดน้ำท่วมถนนวิกฤต</span>
+          <span class="metric-value" id="metric-critical-roads">0 จุด</span>
+          <span class="metric-sub">ระดับน้ำ > 20 ซม. รถเล็กห้ามผ่าน</span>
+        </div>
+      </div>
+
+      <div class="metric-card alert-warning">
+        <div class="metric-icon-box metric-icon-warning">⚠️</div>
+        <div class="metric-data">
+          <span class="metric-title">ถนนมีน้ำรอการระบาย</span>
+          <span class="metric-value" id="metric-warning-roads">0 จุด</span>
+          <span class="metric-sub">ระดับน้ำ 5 - 20 ซม. ชะลอความเร็ว</span>
+        </div>
+      </div>
+
+      <div class="metric-card alert-info">
+        <div class="metric-icon-box metric-icon-info">🛶</div>
+        <div class="metric-data">
+          <span class="metric-title">คลองระดับวิกฤต/ล้นตลิ่ง</span>
+          <span class="metric-value" id="metric-critical-canals">0 สถานี</span>
+          <span class="metric-sub">ระดับน้ำเกิน 90% ของความจุคลอง</span>
+        </div>
+      </div>
+
+      <div class="metric-card alert-cctv">
+        <div class="metric-icon-box metric-icon-cctv">📹</div>
+        <div class="metric-data">
+          <span class="metric-title">กล้องวงจรปิด CCTV สด</span>
+          <span class="metric-value" id="metric-active-cctv">0 กล้อง</span>
+          <span class="metric-sub">พร้อมสตรีมภาพและสถานะการจราจร</span>
+        </div>
+      </div>
+
+      <div class="metric-card alert-rain">
+        <div class="metric-icon-box metric-icon-rain">🌧️</div>
+        <div class="metric-data">
+          <span class="metric-title">ปริมาณฝนสะสมสูงสุด</span>
+          <span class="metric-value" id="metric-max-rain">0 มม.</span>
+          <span class="metric-sub" id="metric-rain-status">กำลังประมวลผลสถานะฝน...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         TOP PINNED PRIORITY ZONE SECTION
+         โซนพิเศษด้านบนสุด: งามวงศ์วาน • ประชาชื่น • แจ้งวัฒนะ • ม.เกษตรศาสตร์ • อ.เมือง นนทบุรี
+         ==================================================================== -->
+    <section class="priority-section" id="pinned-priority-section">
+      <div class="priority-header">
+        <div class="priority-title-wrap">
+          <span class="priority-badge">PINNED TOP</span>
+          <h2 class="priority-title">🚨 โซนเฝ้าระวังพิเศษสูงสุด (Priority Focus Zones)</h2>
+        </div>
+        <div class="priority-subtitle">
+          งามวงศ์วาน • ประชาชื่น • แจ้งวัฒนะ • ม.เกษตรศาสตร์ • อ.เมือง นนทบุรี
+        </div>
+      </div>
+
+      <!-- Priority Cards Grid -->
+      <div class="priority-grid" id="priority-zones-grid">
+        <!-- Dynamically rendered by app.js -->
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         TAB NAVIGATION & FILTER CONTROLS BAR
+         ==================================================================== -->
+    <div class="controls-bar">
+      <!-- Tabs -->
+      <div class="nav-tabs">
+        <button class="tab-btn active" data-tab="overview">
+          <span>📊 ภาพรวมทั้งหมด</span>
+        </button>
+        <button class="tab-btn" data-tab="canals">
+          <span>🛶 ระดับน้ำในคลอง</span>
+        </button>
+        <button class="tab-btn" data-tab="roads">
+          <span>🛣️ น้ำท่วมตามถนน</span>
+        </button>
+        <button class="tab-btn" data-tab="cctv">
+          <span>📹 กล้องวงจรปิด CCTV</span>
+        </button>
+        <button class="tab-btn" data-tab="map">
+          <span>🗺️ แผนที่ & กราฟแนวโน้ม</span>
+        </button>
+      </div>
+
+      <!-- Filters & Search -->
+      <div class="filters-wrap">
+        <div class="search-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="search-input" placeholder="ค้นหาถนน, คลอง, หรือโซน...">
+        </div>
+
+        <select class="filter-select" id="filter-province">
+          <option value="all">📍 ทุกจังหวัด (กทม./นนท์/ปทุม)</option>
+          <option value="กทม.">กรุงเทพมหานคร</option>
+          <option value="นนทบุรี">นนทบุรี</option>
+          <option value="ปทุมธานี">ปทุมธานี</option>
+        </select>
+
+        <select class="filter-select" id="filter-severity">
+          <option value="all">⚡ ทุกระดับความรุนแรง</option>
+          <option value="critical">🔴 วิกฤต (ท่วมสูง / ล้นตลิ่ง)</option>
+          <option value="moderate">🟡 ปานกลาง (เฝ้าระวัง)</option>
+          <option value="minor">🔵 ปกติ / มีน้ำรอระบายเล็กน้อย</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION: MAP & TREND CHARTS
+         ==================================================================== -->
+    <div class="section-panel active" id="panel-map">
+      <div class="map-chart-container">
+        <!-- Interactive Leaflet Map -->
+        <div class="map-card">
+          <div class="section-head">
+            <div>
+              <div class="section-title">🗺️ แผนที่จุดตรวจวัดระดับน้ำและตำแหน่งกล้องวงจรปิด</div>
+              <div class="section-subtitle">คลิกที่หมุดเพื่อดูข้อมูลระดับน้ำหรือเปิดภาพกล้อง CCTV สด</div>
+            </div>
+            <div style="font-size: 0.75rem; color: #94a3b8; display: flex; gap: 0.65rem; align-items: center;">
+              <span>🔴 วิกฤต</span>
+              <span>🟡 เตือนภัย</span>
+              <span>🔵 ปกติ</span>
+              <span>🟢 กล้อง CCTV</span>
+            </div>
+          </div>
+          <div id="map-container"></div>
+        </div>
+
+        <!-- 24h Trend Chart -->
+        <div class="chart-card">
+          <div class="section-head">
+            <div>
+              <div class="section-title">📈 กราฟแนวโน้มระดับน้ำในคลอง (24 ชม. ที่ผ่านมา)</div>
+              <div class="section-subtitle">เปรียบเทียบระดับน้ำทะเลปานกลาง (ม.รทก.) ในแต่ละช่วงเวลา</div>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="trend-chart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION: ROAD WATER LEVELS
+         ==================================================================== -->
+    <div class="section-panel active" id="panel-roads">
+      <div class="section-head">
+        <div>
+          <h3 class="section-title">🛣️ ระดับน้ำท่วมขังตามถนนสายต่างๆ</h3>
+          <div class="section-subtitle">ความสูงน้ำบนผิวจราจร เลนที่ได้รับผลกระทบ และคำแนะนำการเดินทาง</div>
+        </div>
+      </div>
+      <div class="roads-grid" id="roads-list">
+        <!-- Dynamically rendered by app.js -->
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION: CANAL WATER LEVELS
+         ==================================================================== -->
+    <div class="section-panel active" id="panel-canals">
+      <div class="section-head">
+        <div>
+          <h3 class="section-title">🛶 ระดับน้ำในคลองสายหลักและสถานีวัดน้ำ</h3>
+          <div class="section-subtitle">ระดับน้ำเทียบระดับน้ำทะเลปานกลาง (ม.รทก.) และสัดส่วนความจุคลอง</div>
+        </div>
+      </div>
+      <div class="canals-grid" id="canals-list">
+        <!-- Dynamically rendered by app.js -->
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION: CCTV VIDEO FEEDS
+         ==================================================================== -->
+    <div class="section-panel active" id="panel-cctv">
+      <div class="section-head">
+        <div>
+          <h3 class="section-title">📹 สตรีมภาพกล้องวงจรปิด CCTV สภาพจราจรและผิวทาง</h3>
+          <div class="section-subtitle">ตรวจสภาพน้ำท่วมขังบนผิวถนนแบบเรียลไทม์ พร้อมตัวระบุเวลา OSD</div>
+        </div>
+      </div>
+      <div class="cctv-grid" id="cctv-list">
+        <!-- Dynamically rendered by app.js -->
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         FULLSCREEN CCTV MODAL
+         ==================================================================== -->
+    <div class="modal-overlay" id="modal-cctv">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title" id="modal-cctv-title">📹 ภาพกล้องวงจรปิดสด</div>
+          <button class="modal-close-btn" id="modal-cctv-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-viewport">
+            <canvas id="modal-cctv-canvas" width="800" height="460"></canvas>
+            <div class="cctv-osd-top">
+              <span class="cctv-rec-pill">LIVE 30FPS HD</span>
+              <span>FEED STREAM HIGH QUALITY</span>
+            </div>
+            <div class="cctv-osd-bottom">
+              <span id="modal-cctv-clock">--:--:--</span>
+              <span>ZOOM: 1.0X</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" id="modal-cctv-info">
+          <!-- Dynamically populated info -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         FOOTER
+         ==================================================================== -->
+    <footer class="dashboard-footer">
+      <div>ศูนย์ปฏิบัติการติดตามสถานการณ์น้ำท่วมและสภาพจราจรแบบบูรณาการ (กทม. นนทบุรี ปทุมธานี)</div>
+      <div>รองรับการเชื่อมโยงข้อมูลจาก สำนักการระบายน้ำ กทม., สสน. (ThaiWater), กรมทางหลวง, และศูนย์กล้อง CCTV</div>
+    </footer>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Application Scripts -->
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
