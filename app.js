@@ -442,16 +442,15 @@ function renderTopPriorityZones() {
               </span>
             </div>
 
-            <div style="display: flex; gap: 6px; margin-top: 2px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
               <a href="${cctvMeta && cctvMeta.officialWebUrl ? cctvMeta.officialWebUrl : 'http://traffic.bangkok.go.th/'}" 
                  target="_blank" 
                  rel="noopener noreferrer" 
-                 class="btn-cctv-external-watch" 
-                 style="flex: 1;"
+                 class="cctv-subtle-link" 
                  title="เปิดดูกล้องสดจากศูนย์ควบคุมทางการ">
-                🌐 คลิกดูกล้องสดต้นทาง (${cctvMeta && cctvMeta.province.includes('นนทบุรี') ? 'DOH/นนทบุรี' : 'กทม. BMA'})
+                🔗 ดูกล้องสดต้นทาง
               </a>
-              <button class="btn-cctv-expand" onclick="openCctvModal('${zone.cctvId}')" style="padding: 7px 10px; font-size: 0.75rem;">
+              <button class="btn-cctv-expand" onclick="openCctvModal('${zone.cctvId}')" style="padding: 2px 7px; font-size: 0.68rem;">
                 ℹ️ ข้อมูล
               </button>
             </div>
@@ -801,26 +800,25 @@ function renderCctvList() {
               </span>
             </div>
 
-            <div style="display: flex; gap: 6px; margin-top: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
               <a href="${c.officialWebUrl || 'http://traffic.bangkok.go.th/'}" 
                  target="_blank" 
                  rel="noopener noreferrer" 
-                 class="btn-cctv-external-watch" 
-                 style="flex: 1;"
+                 class="cctv-subtle-link" 
                  title="คลิกเพื่อเปิดดูกล้องสดที่ต้นทาง">
-                🌐 คลิกดูกล้องสดต้นทาง (${c.province.includes('นนทบุรี') ? 'DOH/นนทบุรี' : (c.province.includes('ปทุม') ? 'DOH/ปทุมธานี' : 'กทม. BMA')})
+                🔗 ดูกล้องสดต้นทาง
               </a>
-              <button class="btn-cctv-expand" onclick="openCctvModal('${c.id}')" style="padding: 7px 10px; font-size: 0.75rem;">
+              <button class="btn-cctv-expand" onclick="openCctvModal('${c.id}')" style="padding: 2px 7px; font-size: 0.68rem;">
                 ℹ️ ข้อมูล
               </button>
             </div>
           </div>
         </div>
 
-        <div class="cctv-card-info" style="padding: 0.65rem 1rem;">
+        <div class="cctv-card-info" style="padding: 0.5rem 1rem;">
           <div class="cctv-status-row" style="border-top: none; padding-top: 0;">
             <span class="cctv-zone-tag">${c.zone} (${c.province})</span>
-            <span style="color: #38bdf8; font-size: 0.72rem;">🔗 ลิงก์ตรงศูนย์ควบคุมทางการ</span>
+            <span style="color: #64748b; font-size: 0.7rem;">🔗 ลิงก์ตรงศูนย์ควบคุมทางการ</span>
           </div>
         </div>
       </div>
@@ -883,15 +881,14 @@ function openCctvModal(cctvId) {
 
   if (launchArea) {
     launchArea.innerHTML = `
-      <a href="${officialUrl}" 
-         target="_blank" 
-         rel="noopener noreferrer" 
-         class="btn-cctv-external-watch" 
-         style="font-size: 0.95rem; padding: 12px 20px; width: 100%; border-radius: 8px;">
-        🌐 คลิกเปิดดูกล้องสดที่ศูนย์ต้นทาง (${cam.province.includes('นนทบุรี') ? 'DOH / นนทบุรี' : (cam.province.includes('ปทุม') ? 'DOH / ปทุมธานี' : 'กทม. BMA')}) ↗
-      </a>
-      <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 8px;">
-        🔗 เปิดหน้าเว็บถ่ายทอดสดโดยตรงจากหน่วยงานผู้ดูแลระบบ
+      <div style="margin-top: 8px;">
+        <a href="${officialUrl}" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           class="cctv-subtle-link" 
+           style="font-size: 0.74rem;">
+          🔗 ดูกล้องสดต้นทาง ↗
+        </a>
       </div>
     `;
   }
@@ -907,8 +904,8 @@ function openCctvModal(cctvId) {
         <div class="cctv-agency-tag">🏢 หน่วยงานกำกับดูแล: ${agencyName}</div>
       </div>
       <div class="modal-footer-actions">
-        <a href="${officialUrl}" target="_blank" rel="noopener noreferrer" class="btn-official-stream" style="font-size: 0.8rem; padding: 6px 12px;">
-          🌐 เปิดดูกล้องสดต้นทาง ↗
+        <a href="${officialUrl}" target="_blank" rel="noopener noreferrer" class="cctv-subtle-link" style="font-size: 0.72rem;">
+          🔗 ดูกล้องสดต้นทาง ↗
         </a>
       </div>
     `;
