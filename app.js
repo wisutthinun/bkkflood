@@ -22,6 +22,7 @@ let dashboardState = {
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
   try { initTimestamp(); } catch (e) { console.error("initTimestamp error:", e); }
+  try { updatePeaReportsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updatePeaReports error:", e); }
   try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
   try { renderDashboard(); } catch (e) { console.error("renderDashboard error:", e); }
   try { startCctvRenderLoops(); } catch (e) { console.error("startCctvRenderLoops error:", e); }
@@ -66,11 +67,12 @@ function triggerManualRefresh() {
     dashboardState.lastUpdated = new Date();
     updateTimestampDisplay();
     simulateDataFluctuation();
+    updatePeaReportsDynamicData(dashboardState.lastUpdated);
     renderDashboard();
     updateTrendChart();
 
     if (btn) btn.classList.remove("spinning");
-    showNotification("อัปเดตข้อมูลระดับน้ำและข้อมูลกล้อง CCTV เรียบร้อยแล้ว");
+    showNotification("อัปเดตข้อมูลสถานการณ์รอบ กฟภ. และระดับน้ำเรียบร้อยแล้ว");
   }, 650);
 }
 
@@ -112,15 +114,49 @@ function simulateDataFluctuation() {
     });
   }
 
-  // Micro-fluctuation for PEA Recent Photos
-  if (dashboardState.data.peaRecentPhotos) {
-    dashboardState.data.peaRecentPhotos.forEach(p => {
-      if (p.waterDepthCm > 0) {
-        const delta = Math.floor(Math.random() * 3) - 1;
-        p.waterDepthCm = Math.max(0, p.waterDepthCm + delta);
+  // Dynamic update for PEA Recent Situation Reports
+  updatePeaReportsDynamicData(dashboardState.lastUpdated);
+}
+
+function updatePeaReportsDynamicData(baseTime = new Date()) {
+  const reports = dashboardState.data.peaRecentPhotos;
+  if (!reports || reports.length === 0) return;
+
+  // Relative minute offsets guaranteed to be within the past 1 hour (4 min to 54 min ago)
+  const minuteOffsets = [4, 13, 22, 33, 44, 53];
+
+  reports.forEach((r, idx) => {
+    // Slight jitter (-1, 0, +1) so it adjusts realistically
+    const jitter = Math.floor(Math.random() * 3) - 1;
+    let minsAgo = Math.max(2, Math.min(58, (minuteOffsets[idx] || (idx * 9 + 4)) + jitter));
+    r.minutesAgo = minsAgo;
+    r.timeAgo = `${minsAgo} นาทีที่แล้ว`;
+
+    const reportTime = new Date(baseTime.getTime() - minsAgo * 60 * 1000);
+    const hh = String(reportTime.getHours()).padStart(2, '0');
+    const mm = String(reportTime.getMinutes()).padStart(2, '0');
+    r.sharedTime = `${hh}:${mm} น.`;
+
+    // Dynamic water depth changes (-1, 0, +1 cm)
+    if (typeof r.waterDepthCm === 'number') {
+      const depthDelta = Math.floor(Math.random() * 3) - 1;
+      r.waterDepthCm = Math.max(3, r.waterDepthCm + depthDelta);
+
+      if (r.waterDepthCm >= 20) {
+        r.severity = "critical";
+        r.severityLabel = "น้ำท่วมสูง";
+        r.passable = "รถเล็กหลีกเลี่ยง รถกระบะผ่านได้ชะลอตัว";
+      } else if (r.waterDepthCm >= 12) {
+        r.severity = "moderate";
+        r.severityLabel = "น้ำท่วมผิวทาง";
+        r.passable = "รถทุกชนิดผ่านได้ ชะลอความเร็ว";
+      } else {
+        r.severity = "minor";
+        r.severityLabel = "น้ำปริ่มขอบทาง";
+        r.passable = "สัญจรได้คล่องตัวตามปกติ";
       }
-    });
-  }
+    }
+  });
 }
 
 function setupAutoRefresh(seconds) {
@@ -926,11 +962,20 @@ function closeModal() {
 function renderPeaPhotos() {
   const container = document.getElementById("pea-photos-grid");
   const countEl = document.getElementById("pea-photos-count");
+  const syncTimeEl = document.getElementById("pea-sync-time");
   if (!container) return;
+
+  const hh = String(dashboardState.lastUpdated.getHours()).padStart(2, '0');
+  const mm = String(dashboardState.lastUpdated.getMinutes()).padStart(2, '0');
+  const ss = String(dashboardState.lastUpdated.getSeconds()).padStart(2, '0');
+
+  if (syncTimeEl) {
+    syncTimeEl.innerHTML = `⏱️ ข้อมูลอัปเดตสด: <strong>${hh}:${mm}:${ss} น.</strong> (ซิงค์ทุก 5 นาที)`;
+  }
 
   const reports = dashboardState.data.peaRecentPhotos || [];
   if (countEl) {
-    countEl.innerText = `${reports.length} รายงานสถานการณ์ล่าสุด`;
+    countEl.innerText = `${reports.length} รายงานล่าสุด (อัปเดตทุก 5 นาที)`;
   }
 
   if (reports.length === 0) {
@@ -947,7 +992,7 @@ function renderPeaPhotos() {
       <div class="pea-report-card">
         <div class="pea-report-top">
           <span class="pea-report-time">
-            ⏱️ <strong>${r.timeAgo}</strong> (${r.sharedTime})
+            ⏱️ <strong>${r.timeAgo}</strong> (แชร์เมื่อ ${r.sharedTime})
           </span>
           <span class="pea-report-badge ${badgeClass}">
             💧 ระดับน้ำ ${r.waterDepthCm} ซม. (${r.severityLabel})
