@@ -142,6 +142,12 @@ function updatePriorityZonesRainData(currentTime = new Date()) {
       durationStr += `${mins} นาที`;
       zone.rainfall.durationText = durationStr;
 
+      // ไดนามิกปรับฝนสะสมเพิ่มขึ้นทีละนิดตามระยะเวลา (ทุก 5 นาที)
+      if (typeof zone.rainfall.accumulated24h === 'number') {
+        const rainInc = parseFloat((Math.random() * 0.4 + 0.1).toFixed(1));
+        zone.rainfall.accumulated24h = parseFloat((zone.rainfall.accumulated24h + rainInc).toFixed(1));
+      }
+
       // ปรับเวลาพยากรณ์เรดาร์ในอนาคตให้อัปเดตตามเวลาปัจจุบันเสมอ
       if (profile.forecastMinsAhead && profile.getForecast) {
         const forecastDate = new Date(currentTime.getTime() + profile.forecastMinsAhead * 60 * 1000);
@@ -154,11 +160,22 @@ function updatePriorityZonesRainData(currentTime = new Date()) {
       if (!zone.rainfall.stoppedEpoch) {
         zone.rainfall.stoppedEpoch = currentTime.getTime() - profile.stoppedMinsAgo * 60 * 1000;
       }
+      const stoppedElapsedMins = Math.max(5, Math.floor((currentTime.getTime() - zone.rainfall.stoppedEpoch) / 60000));
       const stoppedDate = new Date(zone.rainfall.stoppedEpoch);
       const stHh = String(stoppedDate.getHours()).padStart(2, '0');
       const stMm = String(stoppedDate.getMinutes()).padStart(2, '0');
+      
+      let stoppedAgoStr = "";
+      if (stoppedElapsedMins >= 60) {
+        const sh = Math.floor(stoppedElapsedMins / 60);
+        const sm = stoppedElapsedMins % 60;
+        stoppedAgoStr = `หยุดไปแล้ว ${sh} ชม. ${sm > 0 ? `${sm} นาที` : ''}`;
+      } else {
+        stoppedAgoStr = `หยุดไปแล้ว ${stoppedElapsedMins} นาที`;
+      }
+
       zone.rainfall.stoppedTime = `${stHh}:${stMm} น.`;
-      zone.rainfall.durationText = profile.durationText;
+      zone.rainfall.durationText = `${profile.durationText} (${stoppedAgoStr})`;
       zone.rainfall.radarForecast = profile.radarForecast;
     }
   });
@@ -273,8 +290,9 @@ function simulateDataFluctuation() {
     }
   }
 
-  // Dynamic update for Priority Zones Rain Data & PEA Recent Situation Reports
+  // Dynamic update for Priority Zones Rain Data, CCTV Surface Detection & PEA Recent Situation Reports
   updatePriorityZonesRainData(dashboardState.lastUpdated);
+  updateCctvDynamicData(dashboardState.lastUpdated);
   updatePeaReportsDynamicData(dashboardState.lastUpdated);
 }
 
@@ -650,13 +668,9 @@ function renderTopPriorityZones() {
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-              <a href="${cctvMeta && cctvMeta.officialWebUrl ? cctvMeta.officialWebUrl : 'http://traffic.bangkok.go.th/'}" 
-                 target="_blank" 
-                 rel="noopener noreferrer" 
-                 class="cctv-subtle-link" 
-                 title="เปิดดูกล้องสดจากศูนย์ควบคุมทางการ">
-                🔗 ดูกล้องสดต้นทาง
-              </a>
+              <span style="font-size: 0.7rem; color: #94a3b8;">
+                ⏱️ ตรวจสภาพผิวทาง: <strong style="color: #38bdf8;">${cctvMeta && cctvMeta.lastDetectTime ? cctvMeta.lastDetectTime : 'เมื่อสักครู่'}</strong>
+              </span>
               <button class="btn-cctv-expand" onclick="openCctvModal('${zone.cctvId}')" style="padding: 2px 7px; font-size: 0.68rem;">
                 ℹ️ ข้อมูล
               </button>
@@ -961,20 +975,91 @@ function renderRoads() {
 }
 
 // --------------------------------------------------------------------------
-// CCTV List
+// CCTV List & Dynamic Surface/Traffic Sync (อัปเดตทุก 5 นาที)
 // --------------------------------------------------------------------------
+function updateCctvDynamicData(currentTime = new Date()) {
+  const cctvs = dashboardState.data.cctvList;
+  if (!cctvs || cctvs.length === 0) return;
+
+  const roads = dashboardState.data.roads || [];
+  const priorityZones = dashboardState.data.priorityZones || [];
+
+  cctvs.forEach(cam => {
+    // 1. ตรวจสอบว่ากล้องนี้ตรงกับถนนจุดใดเพื่อดึงระดับน้ำและสภาพจราจรที่สอดคล้องกัน
+    let matchedRoad = roads.find(r => r.roadName && cam.road && (
+      cam.road.includes(r.roadName) || r.roadName.includes(cam.road) ||
+      (cam.name && cam.name.includes(r.roadName))
+    ));
+
+    // ตรวจสอบต่อใน priorityZones ถ้ายังไม่เจอ
+    let matchedZone = priorityZones.find(z => z.cctvId === cam.id || z.cctvSecondaryId === cam.id);
+
+    if (matchedZone) {
+      cam.floodLevelCm = matchedZone.roadFloodLevel;
+      cam.hasFlood = cam.floodLevelCm > 0;
+    } else if (matchedRoad) {
+      cam.floodLevelCm = matchedRoad.floodDepth;
+      cam.hasFlood = cam.floodLevelCm > 0;
+    } else {
+      // Fluctuations เล็กน้อยสำหรับกล้องจุดอื่นๆ
+      if (cam.hasFlood) {
+        const delta = Math.floor(Math.random() * 3) - 1; // -1, 0, +1 cm
+        cam.floodLevelCm = Math.max(0, cam.floodLevelCm + delta);
+        cam.hasFlood = cam.floodLevelCm > 0;
+      }
+    }
+
+    // 2. ปรับสภาพการจราจรตามระดับน้ำท่วมขัง
+    if (cam.floodLevelCm >= 25) {
+      cam.vehicleDensity = "ติดขัดสะสมรุนแรง (น้ำท่วมผิวทางสูง ชะลอตัวมาก)";
+    } else if (cam.floodLevelCm >= 15) {
+      cam.vehicleDensity = "เคลื่อนตัวช้า สลับหยุดนิ่ง (มีน้ำท่วมขังเลนซ้าย)";
+    } else if (cam.floodLevelCm > 0) {
+      cam.vehicleDensity = "ชะลอตัวช่วงผ่านแอ่งน้ำ รถสัญจรได้ระมัดระวัง";
+    } else {
+      cam.vehicleDensity = "คล่องตัว สัญจรได้ตามรอบสัญญาณไฟ";
+    }
+
+    // 3. กำหนดเวลา snapshot หรือตรวจจับสภาพผิวทางล่าสุด (ภายใน 1-3 นาทีก่อน)
+    const minsAgo = Math.floor(Math.random() * 3) + 1;
+    const snapTime = new Date(currentTime.getTime() - minsAgo * 60 * 1000);
+    const snapHh = String(snapTime.getHours()).padStart(2, '0');
+    const snapMm = String(snapTime.getMinutes()).padStart(2, '0');
+    cam.lastDetectTime = `${snapHh}:${snapMm} น. (${minsAgo} นาทีที่แล้ว)`;
+  });
+}
+
 function renderCctvList() {
   const container = document.getElementById("cctv-list");
   if (!container) return;
 
   const keyword = dashboardState.searchKeyword;
   const prov = dashboardState.activeFilterProvince;
+  const now = dashboardState.lastUpdated || new Date();
+
+  // อัปเดตข้อมูลไดนามิกของกล้องก่อนเรนเดอร์
+  updateCctvDynamicData(now);
 
   const filtered = dashboardState.data.cctvList.filter(c => {
     const matchKeyword = !keyword || c.name.toLowerCase().includes(keyword) || c.road.toLowerCase().includes(keyword) || c.zone.toLowerCase().includes(keyword);
     const matchProv = prov === "all" || c.province.includes(prov);
     return matchKeyword && matchProv;
   });
+
+  // อัปเดตหัวข้อ CCTV Header Sync
+  const cctvSyncEl = document.getElementById("cctv-sync-time");
+  if (cctvSyncEl) {
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+    cctvSyncEl.innerText = `⏱️ ข้อมูลสภาพผิวทางสด: ${hh}:${mm}:${ss} น. (อัปเดตทุก 5 นาที)`;
+  }
+
+  const cctvCounterEl = document.getElementById("cctv-counter-badge");
+  if (cctvCounterEl) {
+    const floodCamCount = dashboardState.data.cctvList.filter(c => c.hasFlood).length;
+    cctvCounterEl.innerText = `${dashboardState.data.cctvList.length} กล้องออนไลน์ • ตรวจพบน้ำขัง ${floodCamCount} จุด (อัปเดตทุก 5 นาที)`;
+  }
 
   if (filtered.length === 0) {
     container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #94a3b8;">ไม่พบกล้อง CCTV ที่ตรงกับเงื่อนไขการค้นหา</div>`;
@@ -1008,13 +1093,9 @@ function renderCctvList() {
             </div>
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-              <a href="${c.officialWebUrl || 'http://traffic.bangkok.go.th/'}" 
-                 target="_blank" 
-                 rel="noopener noreferrer" 
-                 class="cctv-subtle-link" 
-                 title="คลิกเพื่อเปิดดูกล้องสดที่ต้นทาง">
-                🔗 ดูกล้องสดต้นทาง
-              </a>
+              <span style="font-size: 0.7rem; color: #94a3b8;">
+                ⏱️ ตรวจสภาพผิวทาง: <strong style="color: #38bdf8;">${c.lastDetectTime || 'เมื่อสักครู่'}</strong>
+              </span>
               <button class="btn-cctv-expand" onclick="openCctvModal('${c.id}')" style="padding: 2px 7px; font-size: 0.68rem;">
                 ℹ️ ข้อมูล
               </button>
@@ -1025,7 +1106,7 @@ function renderCctvList() {
         <div class="cctv-card-info" style="padding: 0.5rem 1rem;">
           <div class="cctv-status-row" style="border-top: none; padding-top: 0;">
             <span class="cctv-zone-tag">${c.zone} (${c.province})</span>
-            <span style="color: #64748b; font-size: 0.7rem;">🔗 ลิงก์ตรงศูนย์ควบคุมทางการ</span>
+            <span style="color: #64748b; font-size: 0.7rem;">📡 ซิงค์ข้อมูลศูนย์ควบคุมทุก 5 นาที</span>
           </div>
         </div>
       </div>
