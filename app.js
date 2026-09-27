@@ -20,7 +20,7 @@ let dashboardState = {
 // ==========================================================================
 // Initialization
 // ==========================================================================
-document.addEventListener("DOMContentLoaded", () => {
+function initApp() {
   try { initTimestamp(); } catch (e) { console.error("initTimestamp error:", e); }
   try { updatePeaReportsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updatePeaReports error:", e); }
   try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
@@ -28,6 +28,19 @@ document.addEventListener("DOMContentLoaded", () => {
   try { startCctvRenderLoops(); } catch (e) { console.error("startCctvRenderLoops error:", e); }
   try { initTrendChart(); } catch (e) { console.warn("Chart init failed (safe to ignore if offline):", e); }
   try { setupAutoRefresh(300); } catch (e) { console.error("setupAutoRefresh error:", e); }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  initApp();
+}
+
+// ป้องกัน BFCache (Back-Forward Cache): โหลดใหม่หากผู้ใช้กด Back/Forward จากแคช
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
 });
 
 // ==========================================================================

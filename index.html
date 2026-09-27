@@ -5,13 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ระบบศูนย์ติดตามระดับน้ำและกล้องวงจรปิด (กรุงเทพฯ - นนทบุรี - ปทุมธานี)</title>
   
+  <!-- Prevent Browser Cache (ป้องกันการเก็บแคช เพื่อให้ข้อมูลสดใหม่เป็นปัจจุบันเสมอ) -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
   <!-- Google Fonts: Prompt -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="style.css">
+  <!-- Custom CSS (with Cache Buster) -->
+  <link rel="stylesheet" href="style.css" id="main-stylesheet">
+  <script>
+    // ป้องกันแคช CSS
+    (function() {
+      const link = document.getElementById('main-stylesheet');
+      if (link) link.href = 'style.css?t=' + Date.now();
+    })();
+  </script>
 </head>
 <body>
   <!-- Ambient background lighting -->
@@ -385,8 +397,18 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-  <!-- Application Scripts -->
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <!-- Application Scripts (ป้องกันแคชด้วย Dynamic Cache Buster ไม่เก็บแคช) -->
+  <script>
+    (function() {
+      const cacheBuster = Date.now();
+      const scripts = ['data.js', 'app.js'];
+      scripts.forEach(file => {
+        const s = document.createElement('script');
+        s.src = file + '?v=' + cacheBuster;
+        s.async = false;
+        document.body.appendChild(s);
+      });
+    })();
+  </script>
 </body>
 </html>
