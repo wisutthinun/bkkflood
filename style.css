@@ -1140,6 +1140,40 @@ body {
   font-weight: 500;
 }
 
+.canal-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.canal-time-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.canal-station-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+}
+
 /* ==========================================================================
    Road Water Level Cards & Severity Tags
    ========================================================================== */

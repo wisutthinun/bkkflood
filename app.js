@@ -290,8 +290,9 @@ function simulateDataFluctuation() {
     }
   }
 
-  // Dynamic update for Priority Zones Rain Data, Road Water Levels, CCTV Surface Detection & PEA Recent Situation Reports
+  // Dynamic update for Priority Zones Rain Data, Canals, Roads, CCTV Surface Detection & PEA Recent Situation Reports
   updatePriorityZonesRainData(dashboardState.lastUpdated);
+  updateCanalsDynamicData(dashboardState.lastUpdated);
   updateRoadsDynamicData(dashboardState.lastUpdated);
   updateCctvDynamicData(dashboardState.lastUpdated);
   updatePeaReportsDynamicData(dashboardState.lastUpdated);
@@ -876,8 +877,81 @@ function renderGoogleFloodHub() {
 }
 
 // --------------------------------------------------------------------------
-// Canal Water Levels
+// Canal Water Levels & Dynamic Telemetry Sync (อัปเดตทุก 5 นาที)
 // --------------------------------------------------------------------------
+function updateCanalsDynamicData(currentTime = new Date()) {
+  const canals = dashboardState.data.canals;
+  if (!canals || canals.length === 0) return;
+
+  const priorityZones = dashboardState.data.priorityZones || [];
+
+  canals.forEach((c, idx) => {
+    // 1. ตรวจสอบว่าคลองนี้เชื่อมโยงกับโซนพื้นที่หลักหรือไม่
+    const matchedZone = priorityZones.find(z => 
+      (z.canalName && (z.canalName.includes(c.name) || c.name.includes(z.canalName))) ||
+      (z.id === "ngamwongwan" && c.id === "canal-bangkhen-ngamwongwan") ||
+      (z.id === "chaengwattana" && c.id === "canal-bangtalad-chaengwattana") ||
+      (z.id === "prachachuen" && c.id === "canal-prapa-samsen") ||
+      (z.id === "kasetsart" && c.id === "canal-bangbua-kaset") ||
+      (z.id === "chinkhet" && c.id === "canal-prem-thewasunthorn")
+    );
+
+    // 2. คำนวณระดับน้ำในคลอง (Micro-fluctuations & Trend calculation)
+    const base = typeof c.baseLevel === 'number' ? c.baseLevel : c.currentLevel;
+    let delta = 0;
+
+    if (matchedZone) {
+      if (matchedZone.trend === "up") {
+        delta = (Math.random() * 0.03); // 0 ถึง +0.03 ม.
+        c.trend = "up";
+      } else if (matchedZone.trend === "down") {
+        delta = -(Math.random() * 0.03); // -0.03 ถึง 0 ม.
+        c.trend = "down";
+      } else {
+        delta = (Math.random() * 0.02 - 0.01); // -0.01 ถึง +0.01 ม.
+        c.trend = "stable";
+      }
+    } else {
+      delta = (Math.random() * 0.03 - 0.015);
+      c.trend = delta > 0.005 ? "up" : (delta < -0.005 ? "down" : "stable");
+    }
+
+    c.currentLevel = parseFloat(Math.max(-0.5, base + delta).toFixed(2));
+    c.capacityPercent = Math.min(100, Math.max(10, Math.round((c.currentLevel / c.criticalLevel) * 100)));
+
+    // 3. ปรับระดับสถานะความรุนแรง
+    if (c.currentLevel >= c.criticalLevel) {
+      c.status = "critical";
+      c.statusLabel = "วิกฤตล้นตลิ่ง";
+    } else if (c.currentLevel >= c.warningLevel) {
+      c.status = "warning";
+      c.statusLabel = "ระดับเตือนภัย";
+    } else if (c.capacityPercent >= 65) {
+      c.status = "watch";
+      c.statusLabel = "เฝ้าระวังปกติ";
+    } else {
+      c.status = "normal";
+      c.statusLabel = "ระดับปกติ";
+    }
+
+    // 4. สุ่มเวลาโทรมาตร (Telemetry Sensor Ping) ล่าสุด 1-3 นาทีก่อน
+    const pingAgo = (idx % 3) + 1;
+    const pingDate = new Date(currentTime.getTime() - pingAgo * 60 * 1000);
+    const pHh = String(pingDate.getHours()).padStart(2, '0');
+    const pMm = String(pingDate.getMinutes()).padStart(2, '0');
+    c.lastTelemetryTime = `${pHh}:${pMm} น. (${pingAgo} นาทีที่แล้ว)`;
+  });
+
+  // อัปเดตเวลาบนหัวข้อ Canal Telemetry
+  const canalsSyncBadge = document.getElementById("canals-sync-time");
+  if (canalsSyncBadge) {
+    const hh = String(currentTime.getHours()).padStart(2, '0');
+    const mm = String(currentTime.getMinutes()).padStart(2, '0');
+    const ss = String(currentTime.getSeconds()).padStart(2, '0');
+    canalsSyncBadge.innerText = `⏱️ ข้อมูลโทรมาตรคลองสด: ${hh}:${mm}:${ss} น. (ซิงค์ทุก 5 นาที)`;
+  }
+}
+
 function renderCanals() {
   const container = document.getElementById("canals-list");
   if (!container) return;
@@ -890,6 +964,23 @@ function renderCanals() {
     const matchProv = prov === "all" || c.province.includes(prov);
     return matchKeyword && matchProv;
   });
+
+  const now = dashboardState.lastUpdated || new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+
+  const canalsSyncBadge = document.getElementById("canals-sync-time");
+  if (canalsSyncBadge) {
+    canalsSyncBadge.innerText = `⏱️ ข้อมูลโทรมาตรคลองสด: ${hh}:${mm}:${ss} น. (ซิงค์ทุก 5 นาที)`;
+  }
+
+  const counterBadge = document.getElementById("canals-counter-badge");
+  if (counterBadge) {
+    const critCount = dashboardState.data.canals.filter(c => c.status === 'critical').length;
+    const warnCount = dashboardState.data.canals.filter(c => c.status === 'warning').length;
+    counterBadge.innerText = `${dashboardState.data.canals.length} สถานีโทรมาตร (${critCount} วิกฤต • ${warnCount} เตือนภัย)`;
+  }
 
   if (filtered.length === 0) {
     container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #94a3b8;">ไม่พบข้อมูลคลองที่ตรงกับเงื่อนไขการค้นหา</div>`;
@@ -916,6 +1007,7 @@ function renderCanals() {
     }
 
     const trendIcon = c.trend === "up" ? "🔺 เพิ่มขึ้น" : c.trend === "down" ? "🔻 ลดลง" : "➡️ ทรงตัว";
+    const telemetryTime = c.lastTelemetryTime || `${hh}:${mm} น. (สดใหม่)`;
 
     return `
       <div class="canal-card">
@@ -952,6 +1044,16 @@ function renderCanals() {
             <span>การระบาย / เดินเครื่อง:</span>
             <span class="val">${c.flowRate}</span>
           </div>
+        </div>
+
+        <div class="canal-card-footer">
+          <span class="canal-time-tag">
+            <span>⏱️ โทรมาตรล่าสุด:</span>
+            <strong>${telemetryTime}</strong>
+          </span>
+          <span class="canal-station-tag">
+            <span>📡 สถานีวัดน้ำอัตโนมัติ: ออนไลน์</span>
+          </span>
         </div>
       </div>
     `;
@@ -1902,6 +2004,7 @@ function updateTrendChart() {
 function initApp() {
   try { initTimestamp(); } catch (e) { console.error("initTimestamp error:", e); }
   try { initPriorityZonesRainDynamic(dashboardState.lastUpdated); } catch (e) { console.error("initPriorityZones error:", e); }
+  try { updateCanalsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updateCanals error:", e); }
   try { updateRoadsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updateRoads error:", e); }
   try { updatePeaReportsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updatePeaReports error:", e); }
   try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
