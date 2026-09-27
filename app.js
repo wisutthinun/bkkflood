@@ -889,11 +889,11 @@ function updateCanalsDynamicData(currentTime = new Date()) {
     // 1. ตรวจสอบว่าคลองนี้เชื่อมโยงกับโซนพื้นที่หลักหรือไม่
     const matchedZone = priorityZones.find(z => 
       (z.canalName && (z.canalName.includes(c.name) || c.name.includes(z.canalName))) ||
-      (z.id === "ngamwongwan" && c.id === "canal-bangkhen-ngamwongwan") ||
+      (z.id === "ngamwongwan" && (c.id === "canal-bangkhen-ngamwongwan" || c.id === "canal-ladtanot-nonthaburi")) ||
       (z.id === "chaengwattana" && c.id === "canal-bangtalad-chaengwattana") ||
       (z.id === "prachachuen" && c.id === "canal-prapa-samsen") ||
-      (z.id === "kasetsart" && c.id === "canal-bangbua-kaset") ||
-      (z.id === "chinkhet" && c.id === "canal-prem-thewasunthorn")
+      (z.id === "kasetsart" && (c.id === "canal-bangbua-kaset" || c.id === "canal-ladyao-chatuchak")) ||
+      (z.id === "chinkhet" && (c.id === "canal-prem-thewasunthorn" || c.id === "canal-ladtanot-nonthaburi"))
     );
 
     // 2. คำนวณระดับน้ำในคลอง (Micro-fluctuations & Trend calculation)
@@ -1982,8 +1982,10 @@ function updateTrendChart() {
         canal = canals.find(c => c.name.includes("บางตลาด"));
       } else if (s.name.includes("ประปา")) {
         canal = canals.find(c => c.name.includes("ประปา"));
-      } else if (s.name.includes("รังสิต")) {
-        canal = canals.find(c => c.name.includes("รังสิต"));
+      } else if (s.name.includes("ลาดโตนด")) {
+        canal = canals.find(c => c.name.includes("ลาดโตนด"));
+      } else if (s.name.includes("ลาดยาว")) {
+        canal = canals.find(c => c.name.includes("ลาดยาว"));
       }
 
       if (canal && s.levels.length > 0) {
