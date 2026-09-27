@@ -587,7 +587,7 @@ function renderGoogleFloodHub() {
             <strong>⚠️ คำแนะนำ AI:</strong> ${st.advisory}
           </div>
           <div class="gfh-card-action">
-            <a href="${st.officialUrl || 'https://floodhub.world/'}" target="_blank" rel="noopener noreferrer" class="btn-gfh-card-link">
+            <a href="${st.officialUrl || 'https://sites.research.google/floods/'}" target="_blank" rel="noopener noreferrer" class="btn-gfh-card-link">
               🌐 ดูแผนที่พยากรณ์จริงบน Google Flood Hub ↗
             </a>
           </div>
@@ -953,8 +953,11 @@ function initTrendChart() {
         },
         tooltip: {
           callbacks: {
+            title: function(items) {
+              return `⏱️ ช่วงเวลา: ${items[0].label}`;
+            },
             label: function(context) {
-              return `${context.dataset.label}: ${context.parsed.y} ม.รทก.`;
+              return ` ${context.dataset.label}: ${context.parsed.y} ม.รทก.`;
             }
           }
         }
@@ -962,7 +965,12 @@ function initTrendChart() {
       scales: {
         x: {
           grid: { color: 'rgba(56, 75, 112, 0.2)' },
-          ticks: { color: '#94a3b8', font: { family: 'Prompt', size: 10 } }
+          ticks: { 
+            color: '#94a3b8', 
+            font: { family: 'Prompt', size: 10 },
+            maxRotation: 45,
+            minRotation: 0
+          }
         },
         y: {
           title: {
@@ -980,7 +988,30 @@ function initTrendChart() {
 }
 
 function updateTrendChart() {
-  if (dashboardState.trendChartInstance) {
+  if (dashboardState.trendChartInstance && dashboardState.data.historicalTrends) {
+    const canals = dashboardState.data.canals;
+    dashboardState.data.historicalTrends.series.forEach((s, idx) => {
+      let canal = null;
+      if (s.name.includes("เปรมประชากร")) {
+        canal = canals.find(c => c.name.includes("เปรมประชากร"));
+      } else if (s.name.includes("บางเขน")) {
+        canal = canals.find(c => c.name.includes("บางเขน"));
+      } else if (s.name.includes("บางตลาด")) {
+        canal = canals.find(c => c.name.includes("บางตลาด"));
+      } else if (s.name.includes("ประปา")) {
+        canal = canals.find(c => c.name.includes("ประปา"));
+      } else if (s.name.includes("รังสิต")) {
+        canal = canals.find(c => c.name.includes("รังสิต"));
+      }
+
+      if (canal && s.levels.length > 0) {
+        s.levels[s.levels.length - 1] = canal.currentLevel;
+        if (dashboardState.trendChartInstance.data.datasets[idx]) {
+          dashboardState.trendChartInstance.data.datasets[idx].data = s.levels;
+        }
+      }
+    });
+
     dashboardState.trendChartInstance.update();
   }
 }
