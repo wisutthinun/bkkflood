@@ -296,8 +296,19 @@
     <div class="section-panel active" id="panel-roads">
       <div class="section-head">
         <div>
-          <h3 class="section-title">🛣️ ระดับน้ำท่วมขังตามถนนสายต่างๆ</h3>
-          <div class="section-subtitle">ความสูงน้ำบนผิวจราจร เลนที่ได้รับผลกระทบ และคำแนะนำการเดินทาง</div>
+          <div class="pea-title-badge-wrap">
+            <span class="pea-brand-badge" style="background: rgba(2, 132, 199, 0.15); border-color: rgba(2, 132, 199, 0.4); color: #38bdf8;">
+              <span class="pea-brand-icon">🛣️</span>
+              <strong>ROAD FLOOD MONITOR</strong>
+              <span class="pea-live-pill" style="background: #0284c7;">สดทุก 5 นาที</span>
+            </span>
+            <span class="pea-lead-time" id="roads-sync-time">⏱️ ข้อมูลสภาพถนนสด: --:--:-- น. (ซิงค์ทุก 5 นาที)</span>
+          </div>
+          <h3 class="section-title" style="margin-top: 0.35rem;">🛣️ ระดับน้ำท่วมขังตามถนนสายต่างๆ</h3>
+          <div class="section-subtitle">ความสูงน้ำบนผิวจราจร เลนที่ได้รับผลกระทบ สภาพการสัญจร และเซนเซอร์ตรวจวัด • อัปเดตทุก 5 นาที</div>
+        </div>
+        <div class="pea-header-actions">
+          <span class="pea-counter-badge" id="roads-counter-badge">กำลังตรวจสอบข้อมูลถนน...</span>
         </div>
       </div>
       <div class="roads-grid" id="roads-list">

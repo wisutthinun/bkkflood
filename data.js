@@ -413,11 +413,29 @@ const INITIAL_DATA = {
   // ข้อมูลระดับน้ำตามถนนต่างๆ
   roads: [
     {
+      id: "road-pea-ngamwongwan",
+      roadName: "ถนนงามวงศ์วาน (หน้า สนง.ใหญ่ กฟภ. - ปากซอยชินเขต)",
+      location: "หน้าสำนักงานใหญ่ การไฟฟ้าส่วนภูมิภาค (PEA) - ปากซอยชินเขต 1-2 (งามวงศ์วาน 43/47)",
+      province: "กทม.",
+      zone: "ชุมชนชินเขต / PEA",
+      baseFloodDepth: 14,
+      floodDepth: 14, // ซม.
+      affectedLanes: "1 เลนซ้ายสุดฝั่งขาออก และทางคู่ขนานเชื่อม สนง.ใหญ่ กฟภ.",
+      severity: "moderate", // normal, minor, moderate, critical
+      severityLabel: "น้ำท่วมปานกลาง",
+      vehicleAdvice: "รถเล็กชะลอความเร็ว เลี่ยงชิดซ้าย แนะนำเบี่ยงออกเลนกลาง-ขวา",
+      cause: "น้ำรอการระบายลงคลองเปรมประชากรและคลองบางเขน",
+      pumpsActive: 5,
+      drainageStatus: "เครื่องสูบน้ำเคลื่อนที่ กทม. และ กฟภ. เร่งสูบระบายต่อเนื่อง",
+      coordinates: [13.8542, 100.5518]
+    },
+    {
       id: "road-ngamwongwan-pongphet",
       roadName: "ถนนงามวงศ์วาน",
       location: "สี่แยกพงษ์เพชร - หน้าเดอะมอลล์งามวงศ์วาน",
       province: "นนทบุรี / กทม.",
       zone: "งามวงศ์วาน",
+      baseFloodDepth: 25,
       floodDepth: 25, // ซม.
       affectedLanes: "2-3 เลนซ้าย และช่องทางคู่ขนาน",
       severity: "critical", // normal, minor, moderate, critical
@@ -434,6 +452,7 @@ const INITIAL_DATA = {
       location: "สี่แยกประชานุกูล - ประชาชื่น 30",
       province: "กทม.",
       zone: "ประชาชื่น",
+      baseFloodDepth: 15,
       floodDepth: 15,
       affectedLanes: "1-2 เลนซ้าย (ชิดทางเท้า)",
       severity: "moderate",
@@ -450,6 +469,7 @@ const INITIAL_DATA = {
       location: "หน้าศูนย์ราชการเฉลิมพระเกียรติ - กรมการกงสุล",
       province: "กทม. / นนทบุรี",
       zone: "แจ้งวัฒนะ",
+      baseFloodDepth: 30,
       floodDepth: 30,
       affectedLanes: "ท่วมเต็มผิวจราจรทุกช่องทาง (ทั้งฝั่งขาเข้า-ขาออก)",
       severity: "critical",
@@ -466,6 +486,7 @@ const INITIAL_DATA = {
       location: "แยกเกษตรศาสตร์ - ประตู 1 มหาวิทยาลัยเกษตรศาสตร์",
       province: "กทม.",
       zone: "ม.เกษตร",
+      baseFloodDepth: 18,
       floodDepth: 18,
       affectedLanes: "เลนซ้ายสุดและช่องทางคู่ขนาน 1 เลน",
       severity: "moderate",
@@ -482,6 +503,7 @@ const INITIAL_DATA = {
       location: "ห้าแยกลาดพร้าว - สี่แยกหลักสี่ (ช่วงคลองบางซื่อ)",
       province: "กทม.",
       zone: "กทม. ตอนเหนือ",
+      baseFloodDepth: 10,
       floodDepth: 10,
       affectedLanes: "ทางคู่ขนานฝั่งขาออก บริเวณป้ายรถเมล์",
       severity: "minor",
@@ -498,6 +520,7 @@ const INITIAL_DATA = {
       location: "แยกแคราย - เชิงสะพานพระนั่งเกล้า",
       province: "นนทบุรี",
       zone: "นนทบุรี",
+      baseFloodDepth: 12,
       floodDepth: 12,
       affectedLanes: "ช่องทางซ้ายสุด 1 เลน",
       severity: "minor",
@@ -514,6 +537,7 @@ const INITIAL_DATA = {
       location: "ห้าแยกปากเกร็ด - แยกสวนสมเด็จ",
       province: "นนทบุรี",
       zone: "นนทบุรี ตอนเหนือ",
+      baseFloodDepth: 22,
       floodDepth: 22,
       affectedLanes: "2 ช่องจราจรฝั่งมุ่งหน้าปทุมธานี",
       severity: "critical",
@@ -530,6 +554,7 @@ const INITIAL_DATA = {
       location: "หน้าศูนย์การค้าฟิวเจอร์พาร์ครังสิต - ตลาดสี่มุมเมือง",
       province: "ปทุมธานี",
       zone: "ปทุมธานี",
+      baseFloodDepth: 28,
       floodDepth: 28,
       affectedLanes: "ช่องทางคู่ขนานท่วมเต็มทุกเลน ช่องทางด่วนมีน้ำขังเลนซ้าย",
       severity: "critical",
@@ -546,6 +571,7 @@ const INITIAL_DATA = {
       location: "ช่วงคลอง 1 - คลอง 3 ลำลูกกา",
       province: "ปทุมธานี",
       zone: "ปทุมธานี ตะวันออก",
+      baseFloodDepth: 14,
       floodDepth: 14,
       affectedLanes: "1 ช่องทางซ้ายฝั่งขาเข้า",
       severity: "moderate",

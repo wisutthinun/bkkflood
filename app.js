@@ -290,8 +290,9 @@ function simulateDataFluctuation() {
     }
   }
 
-  // Dynamic update for Priority Zones Rain Data, CCTV Surface Detection & PEA Recent Situation Reports
+  // Dynamic update for Priority Zones Rain Data, Road Water Levels, CCTV Surface Detection & PEA Recent Situation Reports
   updatePriorityZonesRainData(dashboardState.lastUpdated);
+  updateRoadsDynamicData(dashboardState.lastUpdated);
   updateCctvDynamicData(dashboardState.lastUpdated);
   updatePeaReportsDynamicData(dashboardState.lastUpdated);
 }
@@ -958,8 +959,78 @@ function renderCanals() {
 }
 
 // --------------------------------------------------------------------------
-// Road Flooding Levels
+// Road Flooding Levels & Dynamic 5-Min Sync
 // --------------------------------------------------------------------------
+function updateRoadsDynamicData(currentTime = new Date()) {
+  const roads = dashboardState.data.roads;
+  if (!roads || roads.length === 0) return;
+
+  const priorityZones = dashboardState.data.priorityZones || [];
+
+  roads.forEach((r, idx) => {
+    // 1. ตรวจสอบว่าถนนนี้ผูกกับโซน priority ใดหรือไม่ เพื่อให้ระดับน้ำเชื่อมโยงกับปริมาณฝนและระดับน้ำในคลอง
+    const matchedZone = priorityZones.find(z => 
+      (z.name && r.roadName && (z.name.includes(r.roadName) || r.roadName.includes(z.name))) ||
+      (z.keyLocation && (z.keyLocation.includes(r.roadName) || (r.location && z.keyLocation.includes(r.location)))) ||
+      (z.id === "ngamwongwan" && r.id === "road-ngamwongwan-pongphet") ||
+      (z.id === "chaengwattana" && r.id === "road-chaengwattana-gov") ||
+      (z.id === "prachachuen" && r.id === "road-prachachuen-prachanukul") ||
+      (z.id === "kasetsart" && r.id === "road-kasetsart-ngamwongwan") ||
+      (z.id === "chinkhet" && r.id === "road-pea-ngamwongwan")
+    );
+
+    // 2. คำนวณระดับน้ำขัง (Micro-fluctuations & Dynamic Trends)
+    const base = typeof r.baseFloodDepth === 'number' ? r.baseFloodDepth : r.floodDepth;
+    let delta = 0;
+
+    if (matchedZone) {
+      // อิงตามแนวโน้มและระดับน้ำของโซนปักหมุด
+      if (matchedZone.trend === "up") {
+        delta = Math.floor(Math.random() * 3); // 0 ถึง +2 cm
+      } else if (matchedZone.trend === "down") {
+        delta = -Math.floor(Math.random() * 3); // -2 ถึง 0 cm
+      } else {
+        delta = Math.floor(Math.random() * 3) - 1; // -1, 0, +1 cm
+      }
+    } else {
+      delta = Math.floor(Math.random() * 3) - 1;
+    }
+
+    r.floodDepth = Math.max(2, base + delta);
+
+    // 3. ปรับระดับความรุนแรงและป้ายกำกับ
+    if (r.floodDepth >= 25) {
+      r.severity = "critical";
+      r.severityLabel = "น้ำท่วมสูง (วิกฤต)";
+      r.vehicleAdvice = "รถเล็ก รถเก๋ง มอเตอร์ไซค์ ห้ามผ่านเด็ดขาด";
+    } else if (r.floodDepth >= 14) {
+      r.severity = "moderate";
+      r.severityLabel = "น้ำท่วมปานกลาง";
+      r.vehicleAdvice = "รถเล็กผ่านได้ด้วยความระมัดระวัง แนะนำใช้เลนขวา";
+    } else {
+      r.severity = "minor";
+      r.severityLabel = "น้ำรอการระบาย";
+      r.vehicleAdvice = "สัญจรผ่านได้ทุกช่องทาง ชะลอความเร็วเลนซ้าย";
+    }
+
+    // 4. สุ่มเวลาตรวจวัดของเซนเซอร์ผิวทาง (1-4 นาทีก่อนหน้า)
+    const detectAgo = (idx % 3) + 1;
+    const detectDate = new Date(currentTime.getTime() - detectAgo * 60 * 1000);
+    const dHh = String(detectDate.getHours()).padStart(2, '0');
+    const dMm = String(detectDate.getMinutes()).padStart(2, '0');
+    r.lastCheckedTime = `${dHh}:${dMm} น. (${detectAgo} นาทีที่แล้ว)`;
+  });
+
+  // อัปเดตเวลาบนหัวข้อ Road Flood Monitor
+  const roadsSyncBadge = document.getElementById("roads-sync-time");
+  if (roadsSyncBadge) {
+    const hh = String(currentTime.getHours()).padStart(2, '0');
+    const mm = String(currentTime.getMinutes()).padStart(2, '0');
+    const ss = String(currentTime.getSeconds()).padStart(2, '0');
+    roadsSyncBadge.innerText = `⏱️ ข้อมูลสภาพถนนสด: ${hh}:${mm}:${ss} น. (ซิงค์ทุก 5 นาที)`;
+  }
+}
+
 function renderRoads() {
   const container = document.getElementById("roads-list");
   if (!container) return;
@@ -975,12 +1046,31 @@ function renderRoads() {
     return matchKeyword && matchProv && matchSev;
   });
 
+  const now = dashboardState.lastUpdated || new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+
+  const roadsSyncBadge = document.getElementById("roads-sync-time");
+  if (roadsSyncBadge) {
+    roadsSyncBadge.innerText = `⏱️ ข้อมูลสภาพถนนสด: ${hh}:${mm}:${ss} น. (ซิงค์ทุก 5 นาที)`;
+  }
+
+  const counterBadge = document.getElementById("roads-counter-badge");
+  if (counterBadge) {
+    const critCount = dashboardState.data.roads.filter(r => r.severity === 'critical').length;
+    const modCount = dashboardState.data.roads.filter(r => r.severity === 'moderate').length;
+    counterBadge.innerText = `${dashboardState.data.roads.length} สายทางตรวจวัด (${critCount} วิกฤต • ${modCount} ปานกลาง)`;
+  }
+
   if (filtered.length === 0) {
     container.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #94a3b8;">ไม่พบข้อมูลถนนที่ตรงกับเงื่อนไขการค้นหา</div>`;
     return;
   }
 
   container.innerHTML = filtered.map(r => {
+    const checkedTime = r.lastCheckedTime || `${hh}:${mm} น. (สดใหม่)`;
+
     return `
       <div class="road-card ${r.severity}">
         <div class="road-card-head">
@@ -1011,6 +1101,16 @@ function renderRoads() {
 
         <div class="road-pumps-status">
           <span>🌀 ${r.drainageStatus}</span>
+        </div>
+
+        <div class="road-card-footer">
+          <span class="road-time-tag">
+            <span>⏱️ ตรวจวัดล่าสุด:</span>
+            <strong>${checkedTime}</strong>
+          </span>
+          <span class="road-sensor-badge">
+            <span>📡 เซนเซอร์ตรวจจับผิวทาง: ออนไลน์</span>
+          </span>
         </div>
       </div>
     `;
@@ -1802,6 +1902,7 @@ function updateTrendChart() {
 function initApp() {
   try { initTimestamp(); } catch (e) { console.error("initTimestamp error:", e); }
   try { initPriorityZonesRainDynamic(dashboardState.lastUpdated); } catch (e) { console.error("initPriorityZones error:", e); }
+  try { updateRoadsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updateRoads error:", e); }
   try { updatePeaReportsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updatePeaReports error:", e); }
   try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
   try { renderDashboard(); } catch (e) { console.error("renderDashboard error:", e); }
