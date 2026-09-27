@@ -10,9 +10,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-  
   <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
@@ -114,6 +111,15 @@
           <span class="metric-sub" id="metric-rain-status">กำลังประมวลผลสถานะฝน...</span>
         </div>
       </div>
+
+      <div class="metric-card alert-gfh">
+        <div class="metric-icon-box metric-icon-gfh">🌐</div>
+        <div class="metric-data">
+          <span class="metric-title">Google Flood Hub (AI)</span>
+          <span class="metric-value" id="metric-gfh-status">เตือนภัย 7 วัน</span>
+          <span class="metric-sub" id="metric-gfh-sub">เสี่ยงน้ำหนุนสูงใน 48 ชม.</span>
+        </div>
+      </div>
     </section>
 
     <!-- ====================================================================
@@ -146,6 +152,9 @@
         <button class="tab-btn active" data-tab="overview">
           <span>📊 ภาพรวมทั้งหมด</span>
         </button>
+        <button class="tab-btn" data-tab="floodhub">
+          <span>🌐 เตือนภัย Google Flood Hub</span>
+        </button>
         <button class="tab-btn" data-tab="canals">
           <span>🛶 ระดับน้ำในคลอง</span>
         </button>
@@ -155,8 +164,8 @@
         <button class="tab-btn" data-tab="cctv">
           <span>📹 กล้องวงจรปิด CCTV</span>
         </button>
-        <button class="tab-btn" data-tab="map">
-          <span>🗺️ แผนที่ & กราฟแนวโน้ม</span>
+        <button class="tab-btn" data-tab="chart">
+          <span>📈 กราฟแนวโน้มระดับน้ำ</span>
         </button>
       </div>
 
@@ -187,33 +196,69 @@
     </div>
 
     <!-- ====================================================================
-         SECTION: MAP & TREND CHARTS
+         SECTION: GOOGLE FLOOD HUB AI EARLY WARNING & FORECAST
+         ระบบเตือนภัยและพยากรณ์น้ำท่วมล่วงหน้า 7 วัน ด้วย AI (Google Flood Hub)
          ==================================================================== -->
-    <div class="section-panel active" id="panel-map">
-      <div class="map-chart-container">
-        <!-- Interactive Leaflet Map -->
-        <div class="map-card">
-          <div class="section-head">
-            <div>
-              <div class="section-title">🗺️ แผนที่จุดตรวจวัดระดับน้ำและตำแหน่งกล้องวงจรปิด</div>
-              <div class="section-subtitle">คลิกที่หมุดเพื่อดูข้อมูลระดับน้ำหรือเปิดภาพกล้อง CCTV สด</div>
-            </div>
-            <div style="font-size: 0.75rem; color: #94a3b8; display: flex; gap: 0.65rem; align-items: center;">
-              <span>🔴 วิกฤต</span>
-              <span>🟡 เตือนภัย</span>
-              <span>🔵 ปกติ</span>
-              <span>🟢 กล้อง CCTV</span>
-            </div>
+    <div class="section-panel active" id="panel-floodhub">
+      <div class="section-head gfh-section-head">
+        <div>
+          <div class="gfh-title-badge-wrap">
+            <span class="gfh-brand-badge">
+              <span class="gfh-brand-icon">🌐</span>
+              <strong>Google Flood Hub</strong>
+              <span class="gfh-ai-pill">AI 7-DAY FORECAST</span>
+            </span>
+            <span class="gfh-lead-time">⏱️ คาดการณ์ล่วงหน้า 7 วัน</span>
           </div>
-          <div id="map-container"></div>
+          <h3 class="section-title" style="margin-top: 0.35rem;">🌐 การเตือนภัยและแนวโน้มน้ำท่วมล่วงหน้า (AI Hydrological Forecast)</h3>
+          <div class="section-subtitle">
+            แบบจำลองปัญญาประดิษฐ์และดาวเทียมตรวจวัดลุ่มน้ำเจ้าพระยาตอนล่าง ครอบคลุม กทม., นนทบุรี, ปทุมธานี
+          </div>
         </div>
+        <div class="gfh-header-actions">
+          <a href="https://floodhub.world/" target="_blank" rel="noopener noreferrer" class="btn-gfh-official" title="เปิดดูแผนที่สดบน Google Flood Hub">
+            🌐 เปิดดูบน Google Flood Hub Official ↗
+          </a>
+        </div>
+      </div>
 
+      <!-- Google Flood Hub Overview AI Banner -->
+      <div class="gfh-overview-card" id="gfh-overview-box">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- Google Flood Hub Stations AI Forecast Grid -->
+      <div class="gfh-stations-grid" id="gfh-stations-list">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- Google Flood Hub Methodology Footer Note -->
+      <div class="gfh-footer-note">
+        <div class="gfh-note-icon">💡</div>
+        <div class="gfh-note-text">
+          <strong>เกี่ยวกับ Google Flood Hub:</strong> พัฒนาโดย Google Research ร่วมกับเครือข่ายอุตุนิยมวิทยาโลก โดยใช้โมเดล AI Hydrological Simulation ผสานภาพถ่ายดาวเทียมตรวจวัดปริมาณฝน (ECMWF, Sentinel) และข้อมูลสถานีวัดน้ำจริง สามารถพยากรณ์ระดับน้ำล้นตลิ่งล่วงหน้าได้สูงสุด 7 วัน ช่วยให้ประชาชนและเจ้าหน้าที่เตรียมการป้องกันได้ทันท่วงที
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION: HISTORICAL 24H TREND CHARTS (แทนที่แผนที่)
+         ==================================================================== -->
+    <div class="section-panel active" id="panel-chart">
+      <div class="chart-container-full">
         <!-- 24h Trend Chart -->
         <div class="chart-card">
           <div class="section-head">
             <div>
               <div class="section-title">📈 กราฟแนวโน้มระดับน้ำในคลอง (24 ชม. ที่ผ่านมา)</div>
-              <div class="section-subtitle">เปรียบเทียบระดับน้ำทะเลปานกลาง (ม.รทก.) ในแต่ละช่วงเวลา</div>
+              <div class="section-subtitle">เปรียบเทียบระดับน้ำเทียบระดับน้ำทะเลปานกลาง (ม.รทก.) ในแต่ละช่วงเวลา</div>
+            </div>
+            <div style="font-size: 0.75rem; color: #94a3b8; display: flex; gap: 0.65rem; align-items: center;">
+              <span>🔴 งามวงศ์วาน</span>
+              <span>🟠 พงษ์เพชร</span>
+              <span>🔴 แจ้งวัฒนะ</span>
+              <span>🔵 ประชาชื่น</span>
+              <span>🟣 รังสิต</span>
             </div>
           </div>
           <div class="chart-wrapper">
@@ -278,15 +323,16 @@
           <button class="modal-close-btn" id="modal-cctv-close">&times;</button>
         </div>
         <div class="modal-body">
-          <div class="modal-viewport">
-            <canvas id="modal-cctv-canvas" width="800" height="460"></canvas>
-            <div class="cctv-osd-top">
-              <span class="cctv-rec-pill">LIVE 30FPS HD</span>
-              <span>FEED STREAM HIGH QUALITY</span>
+          <div class="modal-viewport" id="modal-cctv-viewport" style="height: auto; min-height: 240px; padding: 1.5rem; background: linear-gradient(135deg, #091124 0%, #132247 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 1rem;">
+            <div style="font-size: 2.8rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));">📡</div>
+            <div>
+              <div style="font-size: 1.15rem; font-weight: 700; color: #fff;" id="modal-cctv-osd-cam">ศูนย์ควบคุมและกล้องวงจรปิดสดทางการ</div>
+              <div style="font-size: 0.82rem; color: #94a3b8; margin-top: 6px; max-width: 500px; line-height: 1.5;" id="modal-cctv-desc-text">
+                ระบบเชื่อมโยงสัญญาณสดตรงจากกล้องวงจรปิดของหน่วยงานต้นทาง เพื่อความถูกต้อง แม่นยำ และไม่มีการแปลงสัญญาณหรือหน่วงเวลา
+              </div>
             </div>
-            <div class="cctv-osd-bottom">
-              <span id="modal-cctv-clock">--:--:--</span>
-              <span>ZOOM: 1.0X</span>
+            <div id="modal-cctv-launch-area" style="width: 100%; max-width: 420px;">
+              <!-- Dynamic Link Button -->
             </div>
           </div>
         </div>
@@ -301,13 +347,10 @@
          ==================================================================== -->
     <footer class="dashboard-footer">
       <div>ศูนย์ปฏิบัติการติดตามสถานการณ์น้ำท่วมและสภาพจราจรแบบบูรณาการ (กทม. นนทบุรี ปทุมธานี)</div>
-      <div>รองรับการเชื่อมโยงข้อมูลจาก สำนักการระบายน้ำ กทม., สสน. (ThaiWater), กรมทางหลวง, และศูนย์กล้อง CCTV</div>
+      <div>รองรับการเชื่อมโยงข้อมูลจาก Google Flood Hub (AI Forecast), สำนักการระบายน้ำ กทม., สสน. (ThaiWater), กรมทางหลวง, และศูนย์กล้อง CCTV</div>
     </footer>
   </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 

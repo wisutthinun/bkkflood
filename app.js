@@ -12,8 +12,6 @@ let dashboardState = {
   activeFilterSeverity: "all",
   searchKeyword: "",
   activeTab: "overview",
-  mapInstance: null,
-  mapMarkers: [],
   trendChartInstance: null,
   cctvAnimFrames: {},
   activeModalCctvId: null
@@ -23,13 +21,12 @@ let dashboardState = {
 // Initialization
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  initTimestamp();
-  initEventListeners();
-  renderDashboard();
-  initMap();
-  initTrendChart();
-  startCctvRenderLoops();
-  setupAutoRefresh(30); // Default 30s auto-refresh
+  try { initTimestamp(); } catch (e) { console.error("initTimestamp error:", e); }
+  try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
+  try { renderDashboard(); } catch (e) { console.error("renderDashboard error:", e); }
+  try { startCctvRenderLoops(); } catch (e) { console.error("startCctvRenderLoops error:", e); }
+  try { initTrendChart(); } catch (e) { console.warn("Chart init failed (safe to ignore if offline):", e); }
+  try { setupAutoRefresh(30); } catch (e) { console.error("setupAutoRefresh error:", e); }
 });
 
 // ==========================================================================
@@ -70,11 +67,10 @@ function triggerManualRefresh() {
     updateTimestampDisplay();
     simulateDataFluctuation();
     renderDashboard();
-    updateMapMarkers();
     updateTrendChart();
 
     if (btn) btn.classList.remove("spinning");
-    showNotification("อัปเดตข้อมูลระดับน้ำและกล้อง CCTV เรียบร้อยแล้ว");
+    showNotification("อัปเดตข้อมูลระดับน้ำและข้อมูลกล้อง CCTV เรียบร้อยแล้ว");
   }, 650);
 }
 
@@ -107,6 +103,14 @@ function simulateDataFluctuation() {
       z.rainfall.durationText = `ตกมาแล้ว ${hours > 0 ? `${hours} ชม. ` : ''}${mins} นาที`;
     }
   });
+
+  // Micro-fluctuation for Google Flood Hub probabilities
+  if (dashboardState.data.googleFloodHub && dashboardState.data.googleFloodHub.stations) {
+    dashboardState.data.googleFloodHub.stations.forEach(st => {
+      const delta = Math.floor(Math.random() * 3) - 1; // -1, 0, +1 %
+      st.probability = Math.min(99, Math.max(30, st.probability + delta));
+    });
+  }
 }
 
 function setupAutoRefresh(seconds) {
@@ -189,7 +193,6 @@ function initEventListeners() {
     provSelect.addEventListener("change", (e) => {
       dashboardState.activeFilterProvince = e.target.value;
       renderDashboard();
-      updateMapMarkers();
     });
   }
 
@@ -246,11 +249,11 @@ function switchTab(tabKey) {
     }
   }
 
-  // Resize Leaflet map if map section became visible
-  if (dashboardState.mapInstance) {
+  // Resize Chart if chart section became visible
+  if (dashboardState.trendChartInstance) {
     setTimeout(() => {
-      dashboardState.mapInstance.invalidateSize();
-    }, 200);
+      dashboardState.trendChartInstance.resize();
+    }, 150);
   }
 }
 
@@ -260,6 +263,7 @@ function switchTab(tabKey) {
 function renderDashboard() {
   renderSummaryMetrics();
   renderTopPriorityZones();
+  renderGoogleFloodHub();
   renderCanals();
   renderRoads();
   renderCctvList();
@@ -298,6 +302,16 @@ function renderSummaryMetrics() {
   if (elRainStatus) {
     elRainStatus.innerText = `${rainingZones.length} ใน ${zones.length} โซนหลักยังมีฝนตก`;
   }
+
+  const gfh = dashboardState.data.googleFloodHub;
+  const elGfhStatus = document.getElementById("metric-gfh-status");
+  if (elGfhStatus && gfh) {
+    elGfhStatus.innerText = `เตือนภัย ${gfh.leadTimeDays} วัน`;
+  }
+  const elGfhSub = document.getElementById("metric-gfh-sub");
+  if (elGfhSub && gfh) {
+    elGfhSub.innerText = `${gfh.keyMetrics.highRiskStations} จุดเสี่ยงสูง (กทม.-นนท์-ปทุม)`;
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -315,6 +329,7 @@ function renderTopPriorityZones() {
     const badgeText = isCritical ? "วิกฤตล้นตลิ่ง/ท่วมสูง" : "เฝ้าระวังน้ำท่วมขัง";
     const statusColor = isCritical ? "text-critical" : "text-warning";
     const rain = zone.rainfall;
+    const cctvMeta = dashboardState.data.cctvList.find(c => c.id === zone.cctvId);
 
     return `
       <div class="priority-card ${isCritical ? 'is-critical' : 'is-warning'}">
@@ -372,22 +387,210 @@ function renderTopPriorityZones() {
           </div>
         ` : ''}
 
-        <!-- Live CCTV Stream Frame -->
-        <div class="zone-cctv-preview" id="preview-wrap-${zone.cctvId}">
-          <canvas id="canvas-${zone.cctvId}" width="400" height="200"></canvas>
-          <div class="cctv-osd-top">
-            <span class="cctv-rec-pill">LIVE REC</span>
-            <span>${zone.cctvName}</span>
+        <!-- Google Flood Hub AI Alert Banner -->
+        ${zone.googleFloodHubAlert ? `
+          <div class="zone-gfh-banner">
+            <div class="zone-gfh-head">
+              <span class="zone-gfh-pill ${zone.googleFloodHubAlert.riskLevel}">
+                🌐 Google Flood Hub AI: ${zone.googleFloodHubAlert.riskLabel}
+              </span>
+              <span class="zone-gfh-prob">
+                ความเสี่ยง: <strong>${zone.googleFloodHubAlert.probability}%</strong> • พีค: ${zone.googleFloodHubAlert.peakDate}
+              </span>
+            </div>
+            <div class="zone-gfh-text">
+              🤖 ${zone.googleFloodHubAlert.forecastSummary}
+            </div>
           </div>
-          <div class="cctv-osd-bottom">
-            <span class="live-clock-tick" id="clock-${zone.cctvId}">--:--:--</span>
-            <button class="btn-cctv-expand" onclick="openCctvModal('${zone.cctvId}')">⛶ ขยายดูสด</button>
+        ` : ''}
+
+        <!-- Official CCTV Direct Portal Access Card (แทนที่หน้าจอดำ) -->
+        <div class="zone-cctv-preview" id="preview-wrap-${zone.cctvId}">
+          <div class="cctv-direct-link-card">
+            <div class="cctv-portal-head">
+              <span class="cctv-portal-badge">
+                <span class="cctv-live-dot"></span>
+                <span>กล้องวงจรปิดสด</span>
+              </span>
+              <span class="live-clock-tick" style="font-family: monospace; font-size: 0.72rem; color: #94a3b8;">--:--:--</span>
+            </div>
+
+            <div class="cctv-portal-body">
+              <div class="cctv-portal-cam-name">📹 ${zone.cctvName}</div>
+              <div class="cctv-portal-cam-dir">🛣️ จุดตรวจ: ${cctvMeta ? cctvMeta.road : zone.keyLocation}</div>
+              ${cctvMeta && cctvMeta.agency ? `<div class="cctv-agency-tag" style="margin-top: 2px;">🏢 ${cctvMeta.agency}</div>` : ''}
+            </div>
+
+            <div class="cctv-portal-traffic-state">
+              <span>🚗 สภาพจราจร: <strong style="color: #f1f5f9;">${cctvMeta ? cctvMeta.vehicleDensity : 'ตรวจพบชะลอตัว'}</strong></span>
+              <span style="color: ${zone.roadFloodLevel > 0 ? '#f87171' : '#34d399'}; font-weight: 600;">
+                ${zone.roadFloodLevel > 0 ? `น้ำท่วม ${zone.roadFloodLevel} ซม.` : 'ผิวทางแห้ง'}
+              </span>
+            </div>
+
+            <div style="display: flex; gap: 6px; margin-top: 2px;">
+              <a href="${cctvMeta && cctvMeta.officialWebUrl ? cctvMeta.officialWebUrl : 'http://traffic.bangkok.go.th/'}" 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 class="btn-cctv-external-watch" 
+                 style="flex: 1;"
+                 title="เปิดดูกล้องสดจากศูนย์ควบคุมทางการ">
+                🌐 คลิกดูกล้องสดต้นทาง (${cctvMeta && cctvMeta.province.includes('นนทบุรี') ? 'DOH/นนทบุรี' : 'กทม. BMA'})
+              </a>
+              <button class="btn-cctv-expand" onclick="openCctvModal('${zone.cctvId}')" style="padding: 7px 10px; font-size: 0.75rem;">
+                ℹ️ ข้อมูล
+              </button>
+            </div>
           </div>
         </div>
 
         <div class="zone-advice-box">
           <strong>⚠️ สภาพเส้นทาง:</strong> ${zone.roadCondition}
           <div style="margin-top: 4px; color: #94a3b8;"><strong>💡 คำแนะนำ:</strong> ${zone.advice}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// --------------------------------------------------------------------------
+// Google Flood Hub AI Early Warning & Forecasting
+// --------------------------------------------------------------------------
+function renderGoogleFloodHub() {
+  const overviewBox = document.getElementById("gfh-overview-box");
+  const stationsList = document.getElementById("gfh-stations-list");
+  if (!overviewBox || !stationsList) return;
+
+  const gfh = dashboardState.data.googleFloodHub;
+  if (!gfh) return;
+
+  // 1. Render AI Overview Banner
+  overviewBox.innerHTML = `
+    <div class="gfh-overview-top">
+      <div class="gfh-overview-title">
+        <span>🤖</span>
+        <span>${gfh.overallRiskTitle}</span>
+      </div>
+      <div class="gfh-overview-meta">
+        <span>📡 ประมวลผลล่าสุด: <strong>${gfh.lastAiModelRun}</strong></span>
+      </div>
+    </div>
+    <div class="gfh-overview-summary">
+      ${gfh.overallSummary}
+    </div>
+    <div class="gfh-stats-bar">
+      <div class="gfh-stat-item">
+        <div class="gfh-stat-label">ช่วงเวลาพยากรณ์ล่วงหน้า</div>
+        <div class="gfh-stat-val" style="color: #38bdf8;">${gfh.leadTimeDays} วัน (7-Day Ahead)</div>
+      </div>
+      <div class="gfh-stat-item">
+        <div class="gfh-stat-label">อัตราน้ำไหลผ่านเจ้าพระยา</div>
+        <div class="gfh-stat-val" style="color: #f59e0b;">${gfh.keyMetrics.chaoPhrayaDischarge}</div>
+      </div>
+      <div class="gfh-stat-item">
+        <div class="gfh-stat-label">แนวโน้มมวลน้ำหลาก</div>
+        <div class="gfh-stat-val" style="color: #ef4444;">${gfh.keyMetrics.dischargeTrend}</div>
+      </div>
+      <div class="gfh-stat-item">
+        <div class="gfh-stat-label">สถานีเสี่ยงอันตราย/เตือนภัย</div>
+        <div class="gfh-stat-val" style="color: #f87171;">${gfh.keyMetrics.highRiskStations} สถานีอันตราย / ${gfh.keyMetrics.warningStations} เตือนภัย</div>
+      </div>
+    </div>
+  `;
+
+  // 2. Filter stations based on province, severity, and search keyword
+  const provFilter = dashboardState.activeFilterProvince;
+  const search = dashboardState.searchKeyword;
+  const sevFilter = dashboardState.activeFilterSeverity;
+
+  let filtered = gfh.stations.filter(st => {
+    // Province filter
+    if (provFilter !== "all" && !st.province.includes(provFilter)) {
+      return false;
+    }
+    // Severity filter
+    if (sevFilter === "critical" && st.riskLevel !== "danger" && st.riskLevel !== "extreme") {
+      return false;
+    }
+    if (sevFilter === "moderate" && st.riskLevel !== "warning") {
+      return false;
+    }
+    if (sevFilter === "minor" && st.riskLevel !== "normal") {
+      return false;
+    }
+    // Search keyword
+    if (search) {
+      const matchName = st.name.toLowerCase().includes(search);
+      const matchBasin = st.basin.toLowerCase().includes(search);
+      const matchProv = st.province.toLowerCase().includes(search);
+      const matchAdv = st.advisory.toLowerCase().includes(search);
+      if (!matchName && !matchBasin && !matchProv && !matchAdv) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    stationsList.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; background: var(--bg-card); border-radius: 12px; color: var(--text-muted);">
+        🔍 ไม่พบข้อมูลสถานีเตือนภัยของ Google Flood Hub ที่ตรงกับเงื่อนไขการค้นหา/ตัวกรอง
+      </div>
+    `;
+    return;
+  }
+
+  stationsList.innerHTML = filtered.map(st => {
+    return `
+      <div class="gfh-card ${st.riskLevel}">
+        <div>
+          <div class="gfh-card-head">
+            <div>
+              <div class="gfh-station-name">🌊 ${st.name}</div>
+              <div class="gfh-station-basin">📍 ${st.basin} • ${st.province}</div>
+            </div>
+            <span class="gfh-risk-badge ${st.riskLevel}">${st.riskLabel}</span>
+          </div>
+
+          <div class="gfh-prob-section" style="margin-top: 0.85rem;">
+            <div class="gfh-prob-head">
+              <span>ความน่าจะเป็นในการเกิดน้ำท่วม (Risk Probability)</span>
+              <strong style="color: #f1f5f9; font-size: 0.85rem;">${st.probability}%</strong>
+            </div>
+            <div class="gfh-prob-bar">
+              <div class="gfh-prob-fill ${st.riskLevel}" style="width: ${st.probability}%;"></div>
+            </div>
+          </div>
+
+          <div class="gfh-card-details" style="margin-top: 0.85rem;">
+            <div class="gfh-detail-row">
+              <span>⏱️ คาดการณ์ระดับน้ำสูงสุด:</span>
+              <strong>${st.peakForecastDate}</strong>
+            </div>
+            <div class="gfh-detail-row">
+              <span>📊 ระดับน้ำคาดการณ์:</span>
+              <strong>${st.expectedWaterLevel}</strong>
+            </div>
+            <div class="gfh-detail-row">
+              <span>📈 แนวโน้ม 7 วัน:</span>
+              <strong style="color: #38bdf8;">${st.trend7Days}</strong>
+            </div>
+            <div class="gfh-detail-row">
+              <span>💧 การไหล/ความจุ:</span>
+              <strong>${st.discharge}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          <div class="gfh-advisory">
+            <strong>⚠️ คำแนะนำ AI:</strong> ${st.advisory}
+          </div>
+          <div class="gfh-card-action">
+            <a href="${st.officialUrl || 'https://floodhub.world/'}" target="_blank" rel="noopener noreferrer" class="btn-gfh-card-link">
+              🌐 ดูแผนที่พยากรณ์จริงบน Google Flood Hub ↗
+            </a>
+          </div>
         </div>
       </div>
     `;
@@ -562,33 +765,48 @@ function renderCctvList() {
     return `
       <div class="cctv-card">
         <div class="cctv-viewport">
-          <canvas id="canvas-${c.id}" width="400" height="220"></canvas>
-          <div class="cctv-osd-top">
-            <span class="cctv-rec-pill">LIVE 30FPS</span>
-            <span>CAM: ${c.id}</span>
-          </div>
-          <div class="cctv-osd-bottom">
-            <span id="clock-${c.id}">--:--:--</span>
-            <button class="btn-cctv-expand" onclick="openCctvModal('${c.id}')">⛶ ขยายเต็มจอ</button>
+          <div class="cctv-direct-link-card">
+            <div class="cctv-portal-head">
+              <span class="cctv-portal-badge">
+                <span class="cctv-live-dot"></span>
+                <span>กล้องวงจรปิดสด</span>
+              </span>
+              <span class="live-clock-tick" style="font-family: monospace; font-size: 0.72rem; color: #94a3b8;">--:--:--</span>
+            </div>
+
+            <div class="cctv-portal-body">
+              <div class="cctv-portal-cam-name" style="font-size: 0.95rem;">📹 ${c.name}</div>
+              <div class="cctv-portal-cam-dir" style="margin-top: 3px;">📍 ${c.road} (${c.direction})</div>
+              ${c.agency ? `<div class="cctv-agency-tag" style="margin-top: 4px;">🏢 กำกับดูแล: ${c.agency}</div>` : ''}
+            </div>
+
+            <div class="cctv-portal-traffic-state" style="margin-top: 2px;">
+              <span>🚗 จราจร: <strong style="color: #f1f5f9;">${c.vehicleDensity}</strong></span>
+              <span style="color: ${c.hasFlood ? '#f87171' : '#34d399'}; font-weight: 600;">
+                ${c.hasFlood ? `ท่วมขัง ${c.floodLevelCm} ซม.` : 'ผิวทางปกติ'}
+              </span>
+            </div>
+
+            <div style="display: flex; gap: 6px; margin-top: 4px;">
+              <a href="${c.officialWebUrl || 'http://traffic.bangkok.go.th/'}" 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 class="btn-cctv-external-watch" 
+                 style="flex: 1;"
+                 title="คลิกเพื่อเปิดดูกล้องสดที่ต้นทาง">
+                🌐 คลิกดูกล้องสดต้นทาง (${c.province.includes('นนทบุรี') ? 'DOH/นนทบุรี' : (c.province.includes('ปทุม') ? 'DOH/ปทุมธานี' : 'กทม. BMA')})
+              </a>
+              <button class="btn-cctv-expand" onclick="openCctvModal('${c.id}')" style="padding: 7px 10px; font-size: 0.75rem;">
+                ℹ️ ข้อมูล
+              </button>
+            </div>
           </div>
         </div>
 
-        <div class="cctv-card-info">
-          <div class="cctv-card-title-row">
-            <div class="cctv-name">${c.name}</div>
-            <span class="cctv-zone-tag">${c.zone}</span>
-          </div>
-          <div class="cctv-desc">
-            <div><strong>จุดติดตั้ง:</strong> ${c.road} (${c.direction})</div>
-            <div><strong>การจราจร:</strong> ${c.vehicleDensity}</div>
-          </div>
-          <div class="cctv-status-row">
-            <span>สถานะผิวทาง: 
-              <strong style="color: ${c.hasFlood ? '#f87171' : '#34d399'};">
-                ${c.hasFlood ? `มีน้ำท่วมขัง ${c.floodLevelCm} ซม.` : 'แห้งปกติ'}
-              </strong>
-            </span>
-            <span style="color: #34d399;">🟢 ONLINE</span>
+        <div class="cctv-card-info" style="padding: 0.65rem 1rem;">
+          <div class="cctv-status-row" style="border-top: none; padding-top: 0;">
+            <span class="cctv-zone-tag">${c.zone} (${c.province})</span>
+            <span style="color: #38bdf8; font-size: 0.72rem;">🔗 ลิงก์ตรงศูนย์ควบคุมทางการ</span>
           </div>
         </div>
       </div>
@@ -597,253 +815,35 @@ function renderCctvList() {
 }
 
 // ==========================================================================
-// Realistic CCTV Stream Canvas Engine
+// CCTV Live Engine & Real-time Clock Sync
 // ==========================================================================
-// Simulates live traffic video, lane markings, rain, vehicles, and flood puddles
-class TrafficSimulation {
-  constructor(canvasId, cameraMeta) {
-    this.canvasId = canvasId;
-    this.meta = cameraMeta;
-    this.vehicles = [];
-    this.raindrops = [];
-    this.lastFrameTime = performance.now();
-    this.init();
-  }
-
-  init() {
-    // Check if camera belongs to a zone with rain data
-    const zone = dashboardState.data.priorityZones.find(z => z.cctvId === this.meta.id || z.cctvSecondaryId === this.meta.id);
-    const isRaining = zone ? (zone.rainfall ? zone.rainfall.isRaining : false) : this.meta.hasFlood;
-    const intensity = zone && zone.rainfall ? zone.rainfall.intensityLevel : (this.meta.hasFlood ? 'moderate' : 'none');
-
-    // Generate vehicles
-    const numVehicles = this.meta.hasFlood ? 8 : 12;
-    for (let i = 0; i < numVehicles; i++) {
-      this.vehicles.push({
-        x: Math.random() * 400,
-        y: 80 + Math.random() * 95,
-        speed: (this.meta.hasFlood ? 0.4 : 1.2) + Math.random() * (this.meta.hasFlood ? 0.6 : 1.5),
-        color: ['#ffffff', '#3b82f6', '#ef4444', '#e2e8f0', '#f59e0b', '#10b981'][Math.floor(Math.random() * 6)],
-        type: Math.random() > 0.7 ? 'bus' : (Math.random() > 0.4 ? 'car' : 'moto'),
-        direction: Math.random() > 0.5 ? 1 : -1
-      });
-    }
-
-    // Generate raindrops matching real rain intensity
-    let numDrops = 0;
-    if (isRaining) {
-      if (intensity === 'heavy') numDrops = 75;
-      else if (intensity === 'moderate') numDrops = 40;
-      else if (intensity === 'light') numDrops = 15;
-    }
-
-    for (let i = 0; i < numDrops; i++) {
-      this.raindrops.push({
-        x: Math.random() * 400,
-        y: Math.random() * 220,
-        len: (intensity === 'heavy' ? 12 : 8) + Math.random() * 8,
-        speed: 10 + Math.random() * 8
-      });
-    }
-  }
-
-  draw(ctx, width, height) {
-    // 1. Draw Road Background & Sky/Buildings
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(0, 0, width, height * 0.4);
-
-    // Distant city silhouette
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(20, height * 0.22, 45, height * 0.18);
-    ctx.fillRect(80, height * 0.15, 60, height * 0.25);
-    ctx.fillRect(180, height * 0.20, 50, height * 0.20);
-    ctx.fillRect(260, height * 0.12, 70, height * 0.28);
-    ctx.fillRect(350, height * 0.25, 40, height * 0.15);
-
-    // Overpass or skyway bridge if applicable
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(0, height * 0.36, width, 12);
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(width * 0.25, height * 0.36, 16, height * 0.64);
-    ctx.fillRect(width * 0.75, height * 0.36, 16, height * 0.64);
-
-    // Asphalt Road
-    ctx.fillStyle = '#181e29';
-    ctx.fillRect(0, height * 0.42, width, height * 0.58);
-
-    // Lane Dividers (Dashed yellow/white lines)
-    ctx.strokeStyle = 'rgba(254, 240, 138, 0.4)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([12, 10]);
-    ctx.beginPath();
-    ctx.moveTo(0, height * 0.62);
-    ctx.lineTo(width, height * 0.62);
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-    ctx.beginPath();
-    ctx.moveTo(0, height * 0.82);
-    ctx.lineTo(width, height * 0.82);
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset line dash
-
-    // 2. Draw Flood Water Overlay if hasFlood
-    if (this.meta.hasFlood) {
-      const floodHeight = height * 0.35;
-      const gradient = ctx.createLinearGradient(0, height - floodHeight, 0, height);
-      gradient.addColorStop(0, 'rgba(30, 58, 138, 0.2)');
-      gradient.addColorStop(0.5, 'rgba(14, 116, 144, 0.45)');
-      gradient.addColorStop(1, 'rgba(8, 47, 73, 0.7)');
-
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, height - floodHeight, width, floodHeight);
-
-      // Water ripples
-      const time = performance.now() * 0.002;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 4; i++) {
-        const rippleY = height - 20 - i * 18 + Math.sin(time + i) * 3;
-        ctx.beginPath();
-        ctx.moveTo(10, rippleY);
-        ctx.quadraticCurveTo(width * 0.5, rippleY + 4, width - 10, rippleY);
-        ctx.stroke();
-      }
-    }
-
-    // 3. Draw Moving Vehicles
-    this.vehicles.forEach(v => {
-      v.x += v.speed * v.direction;
-      if (v.direction === 1 && v.x > width + 40) v.x = -40;
-      if (v.direction === -1 && v.x < -40) v.x = width + 40;
-
-      // Draw vehicle body
-      ctx.fillStyle = v.color;
-      let vWidth = v.type === 'bus' ? 44 : (v.type === 'moto' ? 14 : 26);
-      let vHeight = v.type === 'bus' ? 18 : (v.type === 'moto' ? 8 : 12);
-
-      ctx.fillRect(v.x, v.y, vWidth, vHeight);
-
-      // Headlights / Taillights
-      if (v.direction === 1) {
-        // Taillights red
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
-        ctx.fillRect(v.x, v.y + 2, 3, vHeight - 4);
-        // Headlights white beam
-        ctx.fillStyle = 'rgba(254, 240, 138, 0.9)';
-        ctx.fillRect(v.x + vWidth - 3, v.y + 2, 3, vHeight - 4);
-
-        ctx.fillStyle = 'rgba(254, 240, 138, 0.15)';
-        ctx.beginPath();
-        ctx.moveTo(v.x + vWidth, v.y);
-        ctx.lineTo(v.x + vWidth + 30, v.y - 6);
-        ctx.lineTo(v.x + vWidth + 30, v.y + vHeight + 6);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        // Headlights white left
-        ctx.fillStyle = 'rgba(254, 240, 138, 0.9)';
-        ctx.fillRect(v.x, v.y + 2, 3, vHeight - 4);
-        // Taillights red right
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.8)';
-        ctx.fillRect(v.x + vWidth - 3, v.y + 2, 3, vHeight - 4);
-
-        ctx.fillStyle = 'rgba(254, 240, 138, 0.15)';
-        ctx.beginPath();
-        ctx.moveTo(v.x, v.y);
-        ctx.lineTo(v.x - 30, v.y - 6);
-        ctx.lineTo(v.x - 30, v.y + vHeight + 6);
-        ctx.closePath();
-        ctx.fill();
-      }
-
-      // Water splash under tires in flooded zones
-      if (this.meta.hasFlood && v.y > height * 0.65) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.fillRect(v.x - 4, v.y + vHeight - 2, 8, 3);
-        ctx.fillRect(v.x + vWidth - 4, v.y + vHeight - 2, 8, 3);
-      }
-    });
-
-    // 4. Raindrops
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-    ctx.lineWidth = 1;
-    this.raindrops.forEach(drop => {
-      ctx.beginPath();
-      ctx.moveTo(drop.x, drop.y);
-      ctx.lineTo(drop.x - 2, drop.y + drop.len);
-      ctx.stroke();
-
-      drop.y += drop.speed;
-      drop.x -= 1;
-      if (drop.y > height) {
-        drop.y = -10;
-        drop.x = Math.random() * width;
-      }
-    });
-
-    // 5. Camera Scanline effect
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
-    for (let y = 0; y < height; y += 4) {
-      ctx.fillRect(0, y, width, 1.5);
-    }
-  }
-}
-
-const activeSimulations = {};
+let cctvClockTimer = null;
 
 function startCctvRenderLoops() {
-  const allCameras = dashboardState.data.cctvList;
+  if (cctvClockTimer) clearInterval(cctvClockTimer);
 
-  allCameras.forEach(cam => {
-    activeSimulations[cam.id] = new TrafficSimulation(cam.id, cam);
-  });
-
-  function renderLoop() {
+  function updateClockDisplay() {
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
     const ss = String(now.getSeconds()).padStart(2, '0');
     const clockStr = `${hh}:${mm}:${ss}`;
 
-    // Update all matching canvas elements in DOM (both priority and cctv grid)
-    allCameras.forEach(cam => {
-      const canvases = document.querySelectorAll(`canvas[id="canvas-${cam.id}"]`);
-      canvases.forEach(canvas => {
-        const ctx = canvas.getContext('2d');
-        if (ctx && activeSimulations[cam.id]) {
-          activeSimulations[cam.id].draw(ctx, canvas.width, canvas.height);
-        }
-      });
-
-      // Update OSD Clock
-      const clocks = document.querySelectorAll(`span[id="clock-${cam.id}"]`);
-      clocks.forEach(c => {
-        c.innerText = clockStr;
-      });
+    // Update all live clock indicators on cards
+    document.querySelectorAll('.live-clock-tick').forEach(c => {
+      c.innerText = clockStr;
     });
 
-    // Modal canvas if active
-    if (dashboardState.activeModalCctvId) {
-      const modalCanvas = document.getElementById("modal-cctv-canvas");
-      if (modalCanvas && activeSimulations[dashboardState.activeModalCctvId]) {
-        const ctx = modalCanvas.getContext('2d');
-        if (ctx) {
-          activeSimulations[dashboardState.activeModalCctvId].draw(ctx, modalCanvas.width, modalCanvas.height);
-        }
-        const modalClock = document.getElementById("modal-cctv-clock");
-        if (modalClock) modalClock.innerText = clockStr;
-      }
-    }
-
-    requestAnimationFrame(renderLoop);
+    const modalClock = document.getElementById("modal-cctv-clock");
+    if (modalClock) modalClock.innerText = clockStr;
   }
 
-  requestAnimationFrame(renderLoop);
+  updateClockDisplay();
+  cctvClockTimer = setInterval(updateClockDisplay, 1000);
 }
 
 // ==========================================================================
-// CCTV Modal
+// CCTV Modal with Official Links
 // ==========================================================================
 function openCctvModal(cctvId) {
   const cam = dashboardState.data.cctvList.find(c => c.id === cctvId);
@@ -854,13 +854,49 @@ function openCctvModal(cctvId) {
   const modal = document.getElementById("modal-cctv");
   const modalTitle = document.getElementById("modal-cctv-title");
   const modalInfo = document.getElementById("modal-cctv-info");
+  const osdCam = document.getElementById("modal-cctv-osd-cam");
+  const launchArea = document.getElementById("modal-cctv-launch-area");
+  const descText = document.getElementById("modal-cctv-desc-text");
 
-  if (modalTitle) modalTitle.innerText = `📹 กล้องสด: ${cam.name} (${cam.zone})`;
+  if (modalTitle) modalTitle.innerText = `📹 กล้องวงจรปิด: ${cam.name} (${cam.zone})`;
+  if (osdCam) osdCam.innerText = `📹 ${cam.name}`;
+  if (descText) {
+    descText.innerText = `จุดตรวจ: ${cam.road} (${cam.direction}) | การจราจร: ${cam.vehicleDensity} | น้ำท่วม: ${cam.hasFlood ? `${cam.floodLevelCm} ซม.` : 'ผิวทางแห้งปกติ'}`;
+  }
+
+  const officialUrl = cam.officialWebUrl || (cam.province.includes('นนทบุรี') ? 'https://highwaytraffic.go.th/' : 'http://traffic.bangkok.go.th/');
+  const agencyName = cam.agency || (cam.province.includes('นนทบุรี') ? 'แขวงทางหลวงนนทบุรี / กรมทางหลวง' : 'สำนักการจราจรและขนส่ง กทม.');
+
+  if (launchArea) {
+    launchArea.innerHTML = `
+      <a href="${officialUrl}" 
+         target="_blank" 
+         rel="noopener noreferrer" 
+         class="btn-cctv-external-watch" 
+         style="font-size: 0.95rem; padding: 12px 20px; width: 100%; border-radius: 8px;">
+        🌐 คลิกเปิดดูกล้องสดที่ศูนย์ต้นทาง (${cam.province.includes('นนทบุรี') ? 'DOH / นนทบุรี' : (cam.province.includes('ปทุม') ? 'DOH / ปทุมธานี' : 'กทม. BMA')}) ↗
+      </a>
+      <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 8px;">
+        🔗 เปิดหน้าเว็บถ่ายทอดสดโดยตรงจากหน่วยงานผู้ดูแลระบบ
+      </div>
+    `;
+  }
+
   if (modalInfo) {
     modalInfo.innerHTML = `
-      <span>📍 <strong>ตำแหน่ง:</strong> ${cam.road}</span> • 
-      <span>🚗 <strong>สภาพการจราจร:</strong> ${cam.vehicleDensity}</span> • 
-      <span>🌊 <strong>น้ำท่วมขัง:</strong> ${cam.hasFlood ? `${cam.floodLevelCm} ซม.` : 'ไม่มีน้ำท่วมขัง'}</span>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <div>
+          <span>📍 <strong>จุดติดตั้ง:</strong> ${cam.road} (${cam.direction})</span> • 
+          <span>🚗 <strong>สภาพการจราจร:</strong> ${cam.vehicleDensity}</span> • 
+          <span>🌊 <strong>สภาพผิวทาง:</strong> <strong style="color: ${cam.hasFlood ? '#f87171' : '#34d399'};">${cam.hasFlood ? `มีน้ำท่วมขัง ${cam.floodLevelCm} ซม.` : 'ไม่มีน้ำท่วมขัง'}</strong></span>
+        </div>
+        <div class="cctv-agency-tag">🏢 หน่วยงานกำกับดูแล: ${agencyName}</div>
+      </div>
+      <div class="modal-footer-actions">
+        <a href="${officialUrl}" target="_blank" rel="noopener noreferrer" class="btn-official-stream" style="font-size: 0.8rem; padding: 6px 12px;">
+          🌐 เปิดดูกล้องสดต้นทาง ↗
+        </a>
+      </div>
     `;
   }
 
@@ -873,113 +909,7 @@ function closeModal() {
   dashboardState.activeModalCctvId = null;
 }
 
-// ==========================================================================
-// Interactive Map (Leaflet)
-// ==========================================================================
-function initMap() {
-  const mapEl = document.getElementById("map-container");
-  if (!mapEl || typeof L === 'undefined') return;
 
-  // Center around Bangkok / Nonthaburi / Pathum Thani (Chaengwattana / Ngamwongwan coordinate)
-  const map = L.map('map-container').setView([13.865, 100.55], 11);
-  dashboardState.mapInstance = map;
-
-  // Modern Dark Basemap
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 18
-  }).addTo(map);
-
-  updateMapMarkers();
-}
-
-function updateMapMarkers() {
-  if (!dashboardState.mapInstance || typeof L === 'undefined') return;
-  const map = dashboardState.mapInstance;
-
-  // Clear existing markers
-  dashboardState.mapMarkers.forEach(m => map.removeLayer(m));
-  dashboardState.mapMarkers = [];
-
-  const canals = dashboardState.data.canals;
-  const roads = dashboardState.data.roads;
-  const cctvs = dashboardState.data.cctvList;
-
-  // Add Canal Markers (Blue/Red circle pulses)
-  canals.forEach(c => {
-    const isCrit = c.status === "critical";
-    const color = isCrit ? "#ef4444" : (c.status === "warning" ? "#f59e0b" : "#0284c7");
-
-    const marker = L.circleMarker(c.coordinates, {
-      radius: isCrit ? 10 : 8,
-      fillColor: color,
-      color: "#ffffff",
-      weight: 2,
-      opacity: 1,
-      fillOpacity: 0.85
-    }).addTo(map);
-
-    marker.bindPopup(`
-      <div style="font-family: 'Prompt', sans-serif; color: #1e293b;">
-        <h4 style="margin: 0; font-size: 14px; color: ${color};">🛶 ${c.name}</h4>
-        <div style="font-size: 12px; margin-top: 4px;"><strong>สถานี:</strong> ${c.station}</div>
-        <div style="font-size: 12px;"><strong>ระดับน้ำ:</strong> ${c.currentLevel} ม.รทก. (${c.capacityPercent}%)</div>
-        <div style="font-size: 12px;"><strong>สถานะ:</strong> ${c.statusLabel}</div>
-        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">${c.flowRate}</div>
-      </div>
-    `);
-
-    dashboardState.mapMarkers.push(marker);
-  });
-
-  // Add Road Flood Markers
-  roads.forEach(r => {
-    if (r.floodDepth > 0) {
-      const isCrit = r.severity === "critical";
-      const marker = L.marker(r.coordinates, {
-        icon: L.divIcon({
-          className: 'custom-road-marker',
-          html: `<div style="background: ${isCrit ? '#ef4444' : '#f59e0b'}; color: #fff; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">🌊</div>`,
-          iconSize: [26, 26]
-        })
-      }).addTo(map);
-
-      marker.bindPopup(`
-        <div style="font-family: 'Prompt', sans-serif; color: #1e293b;">
-          <h4 style="margin: 0; font-size: 14px; color: #ef4444;">🚨 ${r.roadName}</h4>
-          <div style="font-size: 12px; margin-top: 4px;"><strong>จุดเกิดเหตุ:</strong> ${r.location}</div>
-          <div style="font-size: 12px; color: #b91c1c;"><strong>ระดับน้ำท่วม:</strong> ${r.floodDepth} ซม. (${r.severityLabel})</div>
-          <div style="font-size: 11px; margin-top: 4px;"><strong>คำแนะนำ:</strong> ${r.vehicleAdvice}</div>
-        </div>
-      `);
-
-      dashboardState.mapMarkers.push(marker);
-    }
-  });
-
-  // Add CCTV Camera Markers
-  cctvs.forEach(cam => {
-    const marker = L.marker(cam.coordinates, {
-      icon: L.divIcon({
-        className: 'custom-cctv-marker',
-        html: `<div style="background: #10b981; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">📹</div>`,
-        iconSize: [24, 24]
-      })
-    }).addTo(map);
-
-    marker.bindPopup(`
-      <div style="font-family: 'Prompt', sans-serif; color: #1e293b;">
-        <h4 style="margin: 0; font-size: 13px; color: #0f766e;">📹 ${cam.name}</h4>
-        <div style="font-size: 11px; margin-top: 2px;"><strong>ถนน:</strong> ${cam.road}</div>
-        <div style="font-size: 11px;"><strong>การจราจร:</strong> ${cam.vehicleDensity}</div>
-        <div style="font-size: 11px; color: ${cam.hasFlood ? '#ef4444' : '#10b981'};"><strong>น้ำท่วม:</strong> ${cam.hasFlood ? `${cam.floodLevelCm} ซม.` : 'ไม่มีน้ำท่วมขัง'}</div>
-        <button onclick="openCctvModal('${cam.id}')" style="margin-top: 6px; background: #0284c7; color: #fff; border: none; border-radius: 4px; padding: 3px 8px; font-size: 11px; cursor: pointer; width: 100%;">เปิดกล้องสด</button>
-      </div>
-    `);
-
-    dashboardState.mapMarkers.push(marker);
-  });
-}
 
 // ==========================================================================
 // Chart.js Historical Trend

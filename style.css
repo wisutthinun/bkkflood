@@ -475,6 +475,15 @@ body {
   color: #38bdf8;
 }
 
+.metric-card.alert-gfh {
+  border-left: 4px solid #4285f4;
+}
+
+.metric-icon-gfh {
+  background: rgba(66, 133, 244, 0.15);
+  color: #60a5fa;
+}
+
 /* Zone stats preview inside card */
 .zone-metrics-strip {
   display: grid;
@@ -572,22 +581,164 @@ body {
   gap: 4px;
 }
 
-/* Mini CCTV Stream preview in priority card */
+/* Zone Google Flood Hub AI Alert Banner inside card */
+.zone-gfh-banner {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(66, 133, 244, 0.35);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.76rem;
+}
+
+.zone-gfh-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.zone-gfh-pill {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zone-gfh-pill.danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.zone-gfh-pill.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.zone-gfh-pill.normal {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.zone-gfh-prob {
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.zone-gfh-text {
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+/* CCTV Direct Official Portal Link Card (แทนที่หน้าจอดำ) */
 .zone-cctv-preview {
   position: relative;
   width: 100%;
-  height: 165px;
   border-radius: 10px;
   overflow: hidden;
-  background: #000;
-  border: 1px solid rgba(56, 75, 112, 0.5);
+  background: linear-gradient(135deg, #0b1329 0%, #111e38 100%);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
-.zone-cctv-preview canvas {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.cctv-direct-link-card {
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background: rgba(15, 23, 42, 0.65);
+  border-radius: 10px;
+}
+
+.cctv-portal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cctv-portal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.cctv-live-dot {
+  width: 7px;
+  height: 7px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #10b981;
+  animation: pulse-dot 1.2s infinite;
+}
+
+.cctv-portal-cam-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #f8fafc;
+  line-height: 1.35;
+}
+
+.cctv-portal-cam-dir {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.cctv-portal-traffic-state {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  padding: 5px 8px;
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 6px;
+  border-left: 3px solid #38bdf8;
+}
+
+.btn-cctv-external-watch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.btn-cctv-external-watch:hover {
+  background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+  color: #ffffff;
+}
+
+.btn-cctv-external-watch svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
 }
 
 .cctv-osd-top {
@@ -657,6 +808,37 @@ body {
 .btn-cctv-expand:hover {
   background: var(--accent-blue);
   border-color: var(--accent-blue);
+}
+
+.btn-official-stream {
+  background: rgba(14, 165, 233, 0.2);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #7dd3fc;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 0.65rem;
+  cursor: pointer;
+  pointer-events: auto;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: all 0.15s ease;
+}
+
+.btn-official-stream:hover {
+  background: rgba(14, 165, 233, 0.4);
+  color: #fff;
+  border-color: #38bdf8;
+}
+
+.cctv-agency-tag {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
 }
 
 .zone-advice-box {
@@ -1072,25 +1254,21 @@ body {
   display: flex;
   flex-direction: column;
   transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .cctv-card:hover {
   border-color: var(--border-glow);
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.15);
 }
 
 .cctv-viewport {
   position: relative;
   width: 100%;
-  height: 220px;
-  background: #000;
+  background: linear-gradient(135deg, #0b1329 0%, #111e38 100%);
   overflow: hidden;
-}
-
-.cctv-viewport canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.15);
 }
 
 .cctv-card-info {
@@ -1137,43 +1315,28 @@ body {
 }
 
 /* ==========================================================================
-   Map & Historical Trends Section
+   Historical 24H Trends Section (Full Width Layout)
    ========================================================================== */
-.map-chart-container {
-  display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: 1.25rem;
+.chart-container-full {
+  width: 100%;
   margin-bottom: 2rem;
 }
 
-@media (max-width: 1024px) {
-  .map-chart-container {
-    grid-template-columns: 1fr;
-  }
-}
-
-.map-card, .chart-card {
+.chart-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 14px;
-  padding: 1.25rem;
+  padding: 1.25rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-#map-container {
-  width: 100%;
-  height: 420px;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .chart-wrapper {
   position: relative;
   width: 100%;
-  height: 420px;
+  height: 440px;
 }
 
 /* ==========================================================================
@@ -1254,9 +1417,11 @@ body {
   overflow: hidden;
 }
 
-.modal-viewport canvas {
+.modal-viewport video,
+.modal-viewport img {
   width: 100%;
   height: 100%;
+  object-fit: cover;
   display: block;
 }
 
@@ -1267,8 +1432,364 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   font-size: 0.82rem;
   color: var(--text-secondary);
+}
+
+.modal-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ==========================================================================
+   Google Flood Hub AI Early Warning Section
+   ========================================================================== */
+.gfh-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.gfh-title-badge-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 0.25rem;
+}
+
+.gfh-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.25), rgba(52, 168, 83, 0.25));
+  border: 1px solid rgba(66, 133, 244, 0.45);
+  border-radius: 30px;
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  color: #ffffff;
+}
+
+.gfh-brand-icon {
+  font-size: 0.95rem;
+}
+
+.gfh-ai-pill {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+
+.gfh-lead-time {
+  font-size: 0.75rem;
+  color: #38bdf8;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.btn-gfh-official {
+  background: linear-gradient(135deg, #4285f4, #1a73e8);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.55rem 1.15rem;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(66, 133, 244, 0.35);
+  transition: all 0.2s ease;
+}
+
+.btn-gfh-official:hover {
+  background: linear-gradient(135deg, #1a73e8, #174ea6);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(66, 133, 244, 0.5);
+  color: #ffffff;
+}
+
+/* Overview Banner */
+.gfh-overview-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(20, 35, 70, 0.8) 100%);
+  border: 1px solid rgba(66, 133, 244, 0.4);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.gfh-overview-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  margin-bottom: 0.85rem;
+}
+
+.gfh-overview-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gfh-overview-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.gfh-overview-summary {
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  line-height: 1.6;
+}
+
+.gfh-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.gfh-stat-item {
+  background: rgba(10, 15, 29, 0.6);
+  border: 1px solid rgba(56, 75, 112, 0.4);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+}
+
+.gfh-stat-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.gfh-stat-val {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-top: 3px;
+}
+
+/* Stations Grid */
+.gfh-stations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.gfh-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.85rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.gfh-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(66, 133, 244, 0.5);
+  box-shadow: 0 8px 24px rgba(66, 133, 244, 0.15);
+}
+
+.gfh-card.danger {
+  border-left: 4px solid #ef4444;
+}
+
+.gfh-card.warning {
+  border-left: 4px solid #f59e0b;
+}
+
+.gfh-card.normal {
+  border-left: 4px solid #10b981;
+}
+
+.gfh-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.gfh-station-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.35;
+}
+
+.gfh-station-basin {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.gfh-risk-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.gfh-risk-badge.danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.gfh-risk-badge.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.gfh-risk-badge.normal {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+/* Probability Bar */
+.gfh-prob-section {
+  background: rgba(10, 15, 29, 0.5);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(56, 75, 112, 0.3);
+}
+
+.gfh-prob-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.74rem;
+  color: #cbd5e1;
+  margin-bottom: 0.4rem;
+}
+
+.gfh-prob-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.gfh-prob-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.6s ease;
+}
+
+.gfh-prob-fill.danger {
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+}
+
+.gfh-prob-fill.warning {
+  background: linear-gradient(90deg, #3b82f6, #f59e0b);
+}
+
+.gfh-prob-fill.normal {
+  background: linear-gradient(90deg, #38bdf8, #10b981);
+}
+
+/* Details list */
+.gfh-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+}
+
+.gfh-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #94a3b8;
+}
+
+.gfh-detail-row strong {
+  color: #f1f5f9;
+}
+
+.gfh-advisory {
+  background: rgba(26, 38, 68, 0.45);
+  border-left: 3px solid #38bdf8;
+  border-radius: 0 6px 6px 0;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.gfh-card-action {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-gfh-card-link {
+  flex: 1;
+  background: rgba(66, 133, 244, 0.15);
+  color: #93c5fd;
+  border: 1px solid rgba(66, 133, 244, 0.4);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.btn-gfh-card-link:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.gfh-footer-note {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(66, 133, 244, 0.25);
+  border-radius: 10px;
+  padding: 0.85rem 1.15rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.76rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.gfh-note-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  color: #fbbf24;
 }
 
 /* ==========================================================================
@@ -1304,7 +1825,7 @@ body {
   .priority-grid {
     grid-template-columns: 1fr;
   }
-  .canals-grid, .roads-grid, .cctv-grid {
+  .canals-grid, .roads-grid, .cctv-grid, .gfh-stations-grid {
     grid-template-columns: 1fr;
   }
 }
