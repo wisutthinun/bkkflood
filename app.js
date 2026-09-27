@@ -135,15 +135,24 @@ function updatePeaReportsDynamicData(baseTime = new Date()) {
   const reports = dashboardState.data.peaRecentPhotos;
   if (!reports || reports.length === 0) return;
 
-  // Relative minute offsets guaranteed to be within the past 1 hour (4 min to 54 min ago)
-  const minuteOffsets = [4, 13, 22, 33, 44, 53];
+  // Relative minute offsets distributed within the past 3 hours (under 180 minutes) for all 14 reports
+  const minuteOffsets = [8, 16, 25, 38, 52, 65, 80, 95, 110, 125, 140, 152, 163, 172];
 
   reports.forEach((r, idx) => {
-    // Slight jitter (-1, 0, +1) so it adjusts realistically
-    const jitter = Math.floor(Math.random() * 3) - 1;
-    let minsAgo = Math.max(2, Math.min(58, (minuteOffsets[idx] || (idx * 9 + 4)) + jitter));
+    // Slight jitter (-2 to +2) so it adjusts realistically on each 5-minute refresh
+    const jitter = Math.floor(Math.random() * 5) - 2;
+    let minsAgo = Math.max(5, Math.min(175, (minuteOffsets[idx] || (idx * 12 + 8)) + jitter));
     r.minutesAgo = minsAgo;
-    r.timeAgo = `${minsAgo} นาทีที่แล้ว`;
+
+    let timeAgoText = "";
+    if (minsAgo >= 60) {
+      const h = Math.floor(minsAgo / 60);
+      const m = minsAgo % 60;
+      timeAgoText = `${h} ชม. ${m > 0 ? `${m} นาที` : ''}ที่แล้ว`;
+    } else {
+      timeAgoText = `${minsAgo} นาทีที่แล้ว`;
+    }
+    r.timeAgo = timeAgoText;
 
     const reportTime = new Date(baseTime.getTime() - minsAgo * 60 * 1000);
     const hh = String(reportTime.getHours()).padStart(2, '0');
@@ -970,7 +979,7 @@ function closeModal() {
 }
 
 // ==========================================================================
-// PEA HQ Situation Reports (รายงานสถานการณ์ล่าสุดรอบ กฟภ. สำนักงานใหญ่ ภายใน 1 ชม.)
+// PEA HQ Situation Reports (รายงานสถานการณ์ล่าสุดรอบ กฟภ. สำนักงานใหญ่ ภายใน 3 ชม.)
 // ==========================================================================
 function renderPeaPhotos() {
   const container = document.getElementById("pea-photos-grid");
