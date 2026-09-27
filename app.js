@@ -17,130 +17,10 @@ let dashboardState = {
   activeModalCctvId: null
 };
 
-// ==========================================================================
-// Initialization
-// ==========================================================================
-function initApp() {
-  try { initTimestamp(); } catch (e) { console.error("initTimestamp error:", e); }
-  try { initPriorityZonesRainDynamic(dashboardState.lastUpdated); } catch (e) { console.error("initPriorityZones error:", e); }
-  try { updatePeaReportsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updatePeaReports error:", e); }
-  try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
-  try { renderDashboard(); } catch (e) { console.error("renderDashboard error:", e); }
-  try { startCctvRenderLoops(); } catch (e) { console.error("startCctvRenderLoops error:", e); }
-  try { initTrendChart(); } catch (e) { console.warn("Chart init failed (safe to ignore if offline):", e); }
-  try { setupAutoRefresh(300); } catch (e) { console.error("setupAutoRefresh error:", e); }
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initApp);
-} else {
-  initApp();
-}
-
-// ป้องกัน BFCache (Back-Forward Cache): โหลดใหม่หากผู้ใช้กด Back/Forward จากแคช
-window.addEventListener("pageshow", (event) => {
-  if (event.persisted) {
-    window.location.reload();
-  }
-});
-
-// ==========================================================================
-// Timestamp & Refresh Logic
-// ==========================================================================
-function formatThaiDateTime(date) {
-  const monthsThai = [
-    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
-    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
-  ];
-  const d = date.getDate();
-  const m = monthsThai[date.getMonth()];
-  const y = date.getFullYear() + 543; // Buddhist Era
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  const ss = String(date.getSeconds()).padStart(2, '0');
-  return `${d} ${m} ${y}, ${hh}:${mm}:${ss} น.`;
-}
-
-function initTimestamp() {
-  updateTimestampDisplay();
-}
-
-function updateTimestampDisplay() {
-  const el = document.getElementById("last-updated-val");
-  if (el) {
-    el.innerText = formatThaiDateTime(dashboardState.lastUpdated);
-  }
-}
-
-function triggerManualRefresh() {
-  const btn = document.getElementById("btn-manual-refresh");
-  if (btn) btn.classList.add("spinning");
-
-  // Simulate realistic network sync & slight water level fluctuation
-  setTimeout(() => {
-    dashboardState.lastUpdated = new Date();
-    updateTimestampDisplay();
-    simulateDataFluctuation();
-    renderDashboard();
-    updateTrendChart();
-
-    if (btn) btn.classList.remove("spinning");
-    showNotification("อัปเดตข้อมูลสถานการณ์รอบ กฟภ. และระดับน้ำเรียบร้อยแล้ว");
-  }, 650);
-}
-
-function simulateDataFluctuation() {
-  // Add small micro-fluctuations to road water depth and canal levels
-  dashboardState.data.canals.forEach(c => {
-    const delta = (Math.random() * 0.04 - 0.02); // -0.02 to +0.02
-    c.currentLevel = parseFloat(Math.max(0, c.currentLevel + delta).toFixed(2));
-    c.capacityPercent = Math.min(100, Math.round((c.currentLevel / c.criticalLevel) * 100));
-  });
-
-  dashboardState.data.roads.forEach(r => {
-    if (r.floodDepth > 0) {
-      const delta = Math.floor(Math.random() * 3) - 1; // -1, 0, +1 cm
-      r.floodDepth = Math.max(0, r.floodDepth + delta);
-    }
-  });
-
-  dashboardState.data.priorityZones.forEach(z => {
-    const delta = Math.floor(Math.random() * 3) - 1;
-    z.roadFloodLevel = Math.max(0, z.roadFloodLevel + delta);
-
-    // Canal slight fluctuation for zone
-    if (typeof z.canalLevel === 'number') {
-      const canalDelta = (Math.random() * 0.02 - 0.01);
-      z.canalLevel = parseFloat(Math.max(0.5, z.canalLevel + canalDelta).toFixed(2));
-      if (z.canalMaxLevel) {
-        z.canalCapacityPercent = Math.min(100, Math.round((z.canalLevel / z.canalMaxLevel) * 100));
-      }
-    }
-
-    // Update rainfall stats if currently raining
-    if (z.rainfall && z.rainfall.isRaining) {
-      const rainDelta = parseFloat((Math.random() * 0.3 + 0.1).toFixed(1));
-      z.rainfall.accumulated24h = parseFloat((z.rainfall.accumulated24h + rainDelta).toFixed(1));
-    }
-  });
-
-  // Micro-fluctuation for Google Flood Hub probabilities
-  if (dashboardState.data.googleFloodHub && dashboardState.data.googleFloodHub.stations) {
-    dashboardState.data.googleFloodHub.stations.forEach(st => {
-      const delta = Math.floor(Math.random() * 3) - 1; // -1, 0, +1 %
-      st.probability = Math.min(99, Math.max(30, st.probability + delta));
-    });
-  }
-
-  // Dynamic update for Priority Zones Rain Data & PEA Recent Situation Reports
-  updatePriorityZonesRainData(dashboardState.lastUpdated);
-  updatePeaReportsDynamicData(dashboardState.lastUpdated);
-}
-
 // --------------------------------------------------------------------------
 // Dynamic Rain Status & Forecast for 6 Priority Zones (Always Live & Current)
 // --------------------------------------------------------------------------
-const ZONE_RAIN_PROFILES = {
+var ZONE_RAIN_PROFILES = {
   "ngamwongwan": {
     initialMinsAgo: 140, // ตกมาแล้ว 2 ชม. 20 นาที
     isRaining: true,
@@ -291,6 +171,99 @@ function updatePriorityZonesRainData(currentTime = new Date()) {
     const ss = String(currentTime.getSeconds()).padStart(2, '0');
     syncBadge.innerText = `${hh}:${mm}:${ss} น.`;
   }
+}
+
+// ==========================================================================
+// Timestamp & Refresh Logic
+// ==========================================================================
+function formatThaiDateTime(date) {
+  const monthsThai = [
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+  ];
+  const d = date.getDate();
+  const m = monthsThai[date.getMonth()];
+  const y = date.getFullYear() + 543; // Buddhist Era
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  const ss = String(date.getSeconds()).padStart(2, '0');
+  return `${d} ${m} ${y}, ${hh}:${mm}:${ss} น.`;
+}
+
+function initTimestamp() {
+  updateTimestampDisplay();
+}
+
+function updateTimestampDisplay() {
+  const el = document.getElementById("last-updated-val");
+  if (el) {
+    el.innerText = formatThaiDateTime(dashboardState.lastUpdated);
+  }
+}
+
+function triggerManualRefresh() {
+  const btn = document.getElementById("btn-manual-refresh");
+  if (btn) btn.classList.add("spinning");
+
+  // Simulate realistic network sync & slight water level fluctuation
+  setTimeout(() => {
+    dashboardState.lastUpdated = new Date();
+    updateTimestampDisplay();
+    simulateDataFluctuation();
+    renderDashboard();
+    updateTrendChart();
+
+    if (btn) btn.classList.remove("spinning");
+    showNotification("อัปเดตข้อมูลสถานการณ์รอบ กฟภ. และระดับน้ำเรียบร้อยแล้ว");
+  }, 650);
+}
+
+function simulateDataFluctuation() {
+  // Add small micro-fluctuations to road water depth and canal levels
+  dashboardState.data.canals.forEach(c => {
+    const delta = (Math.random() * 0.04 - 0.02); // -0.02 to +0.02
+    c.currentLevel = parseFloat(Math.max(0, c.currentLevel + delta).toFixed(2));
+    c.capacityPercent = Math.min(100, Math.round((c.currentLevel / c.criticalLevel) * 100));
+  });
+
+  dashboardState.data.roads.forEach(r => {
+    if (r.floodDepth > 0) {
+      const delta = Math.floor(Math.random() * 3) - 1; // -1, 0, +1 cm
+      r.floodDepth = Math.max(0, r.floodDepth + delta);
+    }
+  });
+
+  dashboardState.data.priorityZones.forEach(z => {
+    const delta = Math.floor(Math.random() * 3) - 1;
+    z.roadFloodLevel = Math.max(0, z.roadFloodLevel + delta);
+
+    // Canal slight fluctuation for zone
+    if (typeof z.canalLevel === 'number') {
+      const canalDelta = (Math.random() * 0.02 - 0.01);
+      z.canalLevel = parseFloat(Math.max(0.5, z.canalLevel + canalDelta).toFixed(2));
+      if (z.canalMaxLevel) {
+        z.canalCapacityPercent = Math.min(100, Math.round((z.canalLevel / z.canalMaxLevel) * 100));
+      }
+    }
+
+    // Update rainfall stats if currently raining
+    if (z.rainfall && z.rainfall.isRaining) {
+      const rainDelta = parseFloat((Math.random() * 0.3 + 0.1).toFixed(1));
+      z.rainfall.accumulated24h = parseFloat((z.rainfall.accumulated24h + rainDelta).toFixed(1));
+    }
+  });
+
+  // Micro-fluctuation for Google Flood Hub probabilities
+  if (dashboardState.data.googleFloodHub && dashboardState.data.googleFloodHub.stations) {
+    dashboardState.data.googleFloodHub.stations.forEach(st => {
+      const delta = Math.floor(Math.random() * 3) - 1; // -1, 0, +1 %
+      st.probability = Math.min(99, Math.max(30, st.probability + delta));
+    });
+  }
+
+  // Dynamic update for Priority Zones Rain Data & PEA Recent Situation Reports
+  updatePriorityZonesRainData(dashboardState.lastUpdated);
+  updatePeaReportsDynamicData(dashboardState.lastUpdated);
 }
 
 function updatePeaReportsDynamicData(baseTime = new Date()) {
@@ -1313,3 +1286,31 @@ function updateTrendChart() {
     dashboardState.trendChartInstance.update();
   }
 }
+
+// ==========================================================================
+// Application Bootstrap (Runs after all definitions are in place)
+// ==========================================================================
+function initApp() {
+  try { initTimestamp(); } catch (e) { console.error("initTimestamp error:", e); }
+  try { initPriorityZonesRainDynamic(dashboardState.lastUpdated); } catch (e) { console.error("initPriorityZones error:", e); }
+  try { updatePeaReportsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updatePeaReports error:", e); }
+  try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
+  try { renderDashboard(); } catch (e) { console.error("renderDashboard error:", e); }
+  try { startCctvRenderLoops(); } catch (e) { console.error("startCctvRenderLoops error:", e); }
+  try { initTrendChart(); } catch (e) { console.warn("Chart init failed (safe to ignore if offline):", e); }
+  try { setupAutoRefresh(300); } catch (e) { console.error("setupAutoRefresh error:", e); }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initApp);
+} else {
+  initApp();
+}
+
+// ป้องกัน BFCache (Back-Forward Cache): โหลดใหม่หากผู้ใช้กด Back/Forward จากแคช
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+

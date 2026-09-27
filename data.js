@@ -1,7 +1,11 @@
-/**
- * ข้อมูลสถานการณ์น้ำ คลอง ถนน และกล้องวงจรปิด (กทม. นนทบุรี ปทุมธานี)
- * ให้ความสำคัญเป็นพิเศษกับโซน: งามวงศ์วาน, ประชาชื่น, แจ้งวัฒนะ, ม.เกษตรศาสตร์
- */
+// คำนวณเวลาตั้งต้นสัมพันธ์กับเวลาจริงของผู้ใช้งาน ณ ขณะโหลดหน้าเว็บ
+const _loadTime = new Date();
+const _formatOffsetTime = (minsOffset) => {
+  const d = new Date(_loadTime.getTime() - minsOffset * 60 * 1000);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm} น.`;
+};
 
 const INITIAL_DATA = {
   // โซนพิเศษที่ปักหมุดไว้ด้านบนสุด
@@ -31,11 +35,11 @@ const INITIAL_DATA = {
         isRaining: true,
         intensity: "ฝนตกปานกลาง",
         intensityLevel: "moderate", // heavy, moderate, light, none
-        startTime: "05:40 น.",
+        startTime: _formatOffsetTime(140),
         durationText: "ตกมาแล้ว 2 ชม. 20 นาที",
         durationMinutes: 140,
         stoppedTime: null,
-        radarForecast: "คาดว่ากลุ่มฝนจะเคลื่อนตัวผ่านพ้นช่วงเวลา 08:45 น."
+        radarForecast: `คาดว่ากลุ่มฝนจะเคลื่อนตัวผ่านพ้นช่วงเวลา ${_formatOffsetTime(-25)}`
       },
       googleFloodHubAlert: {
         riskLevel: "danger",
@@ -70,10 +74,10 @@ const INITIAL_DATA = {
         isRaining: false,
         intensity: "ฝนหยุดตกแล้ว",
         intensityLevel: "none",
-        startTime: "05:15 น.",
-        durationText: "ตกต่อเนื่องรวม 2 ชม. 25 นาที",
-        durationMinutes: 145,
-        stoppedTime: "07:40 น.",
+        startTime: _formatOffsetTime(140),
+        durationText: "ตกต่อเนื่องรวม 1 ชม. 45 นาที",
+        durationMinutes: 105,
+        stoppedTime: _formatOffsetTime(35),
         radarForecast: "กลุ่มฝนสลายตัวแล้ว ไม่มีเมฆฝนใหม่เข้าพื้นที่"
       },
       googleFloodHubAlert: {
@@ -109,11 +113,11 @@ const INITIAL_DATA = {
         isRaining: true,
         intensity: "ฝนตกหนักต่อเนื่อง",
         intensityLevel: "heavy",
-        startTime: "05:10 น.",
-        durationText: "ตกมาแล้ว 2 ชม. 50 นาที",
-        durationMinutes: 170,
+        startTime: _formatOffsetTime(165),
+        durationText: "ตกมาแล้ว 2 ชม. 45 นาที",
+        durationMinutes: 165,
         stoppedTime: null,
-        radarForecast: "กลุ่มฝนฟ้าคะนองหนาแน่น คาดตกต่อเนื่องอีกอย่างน้อย 45 นาที"
+        radarForecast: `กลุ่มฝนฟ้าคะนองหนาแน่น คาดตกต่อเนื่องถึงเวลา ${_formatOffsetTime(-45)}`
       },
       googleFloodHubAlert: {
         riskLevel: "danger",
@@ -148,11 +152,11 @@ const INITIAL_DATA = {
         isRaining: true,
         intensity: "ฝนปรอยๆ เบาบาง",
         intensityLevel: "light",
-        startTime: "05:50 น.",
-        durationText: "ตกมาแล้ว 2 ชม. 10 นาที",
-        durationMinutes: 130,
+        startTime: _formatOffsetTime(110),
+        durationText: "ตกมาแล้ว 1 ชม. 50 นาที",
+        durationMinutes: 110,
         stoppedTime: null,
-        radarForecast: "เมฆฝนเริ่มเบาบาง คาดว่าจะหยุดตกในอีก 15-20 นาที"
+        radarForecast: `เมฆฝนเริ่มเบาบาง คาดว่าจะหยุดตกช่วงเวลา ${_formatOffsetTime(-20)}`
       },
       googleFloodHubAlert: {
         riskLevel: "warning",
@@ -187,11 +191,11 @@ const INITIAL_DATA = {
         isRaining: true,
         intensity: "ฝนตกปานกลาง",
         intensityLevel: "moderate",
-        startTime: "05:30 น.",
-        durationText: "ตกมาแล้ว 2 ชม. 35 นาที",
-        durationMinutes: 155,
+        startTime: _formatOffsetTime(135),
+        durationText: "ตกมาแล้ว 2 ชม. 15 นาที",
+        durationMinutes: 135,
         stoppedTime: null,
-        radarForecast: "กลุ่มฝนยังคงปกคลุมเขตเทศบาลนครนนทบุรี คาดเบาบางลงหลัง 09:00 น."
+        radarForecast: `กลุ่มฝนยังคงปกคลุมเขตเทศบาล คาดเบาบางลงหลัง ${_formatOffsetTime(-30)}`
       },
       googleFloodHubAlert: {
         riskLevel: "danger",
@@ -226,11 +230,11 @@ const INITIAL_DATA = {
         isRaining: true,
         intensity: "ฝนตกปานกลาง",
         intensityLevel: "moderate",
-        startTime: "05:35 น.",
-        durationText: "ตกมาแล้ว 2 ชม. 25 นาที",
-        durationMinutes: 145,
+        startTime: _formatOffsetTime(125),
+        durationText: "ตกมาแล้ว 2 ชม. 5 นาที",
+        durationMinutes: 125,
         stoppedTime: null,
-        radarForecast: "กลุ่มฝนกำลังเคลื่อนตัวไปทางทิศตะวันออกเฉียงเหนือ คาดเบาบางลงใน 30 นาที"
+        radarForecast: `กลุ่มฝนกำลังเคลื่อนตัวไปทางทิศตะวันออกเฉียงเหนือ คาดเบาบางลงราว ${_formatOffsetTime(-25)}`
       },
       googleFloodHubAlert: {
         riskLevel: "danger",
