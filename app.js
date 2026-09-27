@@ -22,6 +22,7 @@ let dashboardState = {
 // ==========================================================================
 function initApp() {
   try { initTimestamp(); } catch (e) { console.error("initTimestamp error:", e); }
+  try { initPriorityZonesRainDynamic(dashboardState.lastUpdated); } catch (e) { console.error("initPriorityZones error:", e); }
   try { updatePeaReportsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updatePeaReports error:", e); }
   try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
   try { renderDashboard(); } catch (e) { console.error("renderDashboard error:", e); }
@@ -80,7 +81,6 @@ function triggerManualRefresh() {
     dashboardState.lastUpdated = new Date();
     updateTimestampDisplay();
     simulateDataFluctuation();
-    updatePeaReportsDynamicData(dashboardState.lastUpdated);
     renderDashboard();
     updateTrendChart();
 
@@ -108,14 +108,19 @@ function simulateDataFluctuation() {
     const delta = Math.floor(Math.random() * 3) - 1;
     z.roadFloodLevel = Math.max(0, z.roadFloodLevel + delta);
 
+    // Canal slight fluctuation for zone
+    if (typeof z.canalLevel === 'number') {
+      const canalDelta = (Math.random() * 0.02 - 0.01);
+      z.canalLevel = parseFloat(Math.max(0.5, z.canalLevel + canalDelta).toFixed(2));
+      if (z.canalMaxLevel) {
+        z.canalCapacityPercent = Math.min(100, Math.round((z.canalLevel / z.canalMaxLevel) * 100));
+      }
+    }
+
     // Update rainfall stats if currently raining
     if (z.rainfall && z.rainfall.isRaining) {
-      const rainDelta = parseFloat((Math.random() * 0.4 + 0.1).toFixed(1));
+      const rainDelta = parseFloat((Math.random() * 0.3 + 0.1).toFixed(1));
       z.rainfall.accumulated24h = parseFloat((z.rainfall.accumulated24h + rainDelta).toFixed(1));
-      z.rainfall.durationMinutes += 1;
-      const hours = Math.floor(z.rainfall.durationMinutes / 60);
-      const mins = z.rainfall.durationMinutes % 60;
-      z.rainfall.durationText = `ตกมาแล้ว ${hours > 0 ? `${hours} ชม. ` : ''}${mins} นาที`;
     }
   });
 
@@ -127,8 +132,165 @@ function simulateDataFluctuation() {
     });
   }
 
-  // Dynamic update for PEA Recent Situation Reports
+  // Dynamic update for Priority Zones Rain Data & PEA Recent Situation Reports
+  updatePriorityZonesRainData(dashboardState.lastUpdated);
   updatePeaReportsDynamicData(dashboardState.lastUpdated);
+}
+
+// --------------------------------------------------------------------------
+// Dynamic Rain Status & Forecast for 6 Priority Zones (Always Live & Current)
+// --------------------------------------------------------------------------
+const ZONE_RAIN_PROFILES = {
+  "ngamwongwan": {
+    initialMinsAgo: 140, // ตกมาแล้ว 2 ชม. 20 นาที
+    isRaining: true,
+    intensity: "ฝนตกปานกลาง",
+    intensityLevel: "moderate",
+    forecastMinsAhead: 25,
+    getForecast: (timeStr) => `คาดว่ากลุ่มฝนจะเคลื่อนตัวผ่านพ้นช่วงเวลา ${timeStr} น.`
+  },
+  "prachachuen": {
+    stoppedMinsAgo: 35, // ฝนหยุดตกแล้วเมื่อ ~35 นาทีที่แล้ว
+    isRaining: false,
+    intensity: "ฝนหยุดตกแล้ว",
+    intensityLevel: "none",
+    durationText: "ตกต่อเนื่องรวม 1 ชม. 45 นาที",
+    radarForecast: "กลุ่มฝนสลายตัวแล้ว ไม่มีเมฆฝนใหม่เข้าพื้นที่"
+  },
+  "chaengwattana": {
+    initialMinsAgo: 165, // ตกมาแล้ว 2 ชม. 45 นาที
+    isRaining: true,
+    intensity: "ฝนตกหนักต่อเนื่อง",
+    intensityLevel: "heavy",
+    forecastMinsAhead: 45,
+    getForecast: (timeStr) => `กลุ่มฝนฟ้าคะนองหนาแน่น คาดตกต่อเนื่องถึงเวลา ${timeStr} น.`
+  },
+  "kasetsart": {
+    initialMinsAgo: 110, // ตกมาแล้ว 1 ชม. 50 นาที
+    isRaining: true,
+    intensity: "ฝนปรอยๆ เบาบาง",
+    intensityLevel: "light",
+    forecastMinsAhead: 20,
+    getForecast: (timeStr) => `เมฆฝนเริ่มเบาบาง คาดว่าจะหยุดตกช่วงเวลา ${timeStr} น.`
+  },
+  "muang-nonthaburi": {
+    initialMinsAgo: 135, // ตกมาแล้ว 2 ชม. 15 นาที
+    isRaining: true,
+    intensity: "ฝนตกปานกลาง",
+    intensityLevel: "moderate",
+    forecastMinsAhead: 30,
+    getForecast: (timeStr) => `กลุ่มฝนยังคงปกคลุมเขตเทศบาล คาดเบาบางลงหลัง ${timeStr} น.`
+  },
+  "chinkhet": {
+    initialMinsAgo: 125, // ตกมาแล้ว 2 ชม. 5 นาที
+    isRaining: true,
+    intensity: "ฝนตกปานกลาง",
+    intensityLevel: "moderate",
+    forecastMinsAhead: 25,
+    getForecast: (timeStr) => `กลุ่มฝนกำลังเคลื่อนตัวไปทางทิศตะวันออกเฉียงเหนือ คาดเบาบางลงราว ${timeStr} น.`
+  }
+};
+
+function initPriorityZonesRainDynamic(baseTime = new Date()) {
+  const zones = dashboardState.data.priorityZones;
+  if (!zones || zones.length === 0) return;
+
+  zones.forEach(zone => {
+    const profile = ZONE_RAIN_PROFILES[zone.id];
+    if (!profile) return;
+    if (!zone.rainfall) zone.rainfall = {};
+
+    if (profile.isRaining) {
+      // คำนวณเวลาเริ่มตกโดยอิงจากเวลาเครื่องปัจจุบันย้อนหลังตามระยะเวลาสมจริง
+      const startMs = baseTime.getTime() - profile.initialMinsAgo * 60 * 1000;
+      zone.rainfall.startEpoch = startMs;
+      zone.rainfall.isRaining = true;
+      zone.rainfall.intensity = profile.intensity;
+      zone.rainfall.intensityLevel = profile.intensityLevel;
+
+      const startDate = new Date(startMs);
+      const hh = String(startDate.getHours()).padStart(2, '0');
+      const mm = String(startDate.getMinutes()).padStart(2, '0');
+      zone.rainfall.startTime = `${hh}:${mm} น.`;
+    } else {
+      // โซนที่ฝนหยุดตกแล้ว
+      const stoppedMs = baseTime.getTime() - profile.stoppedMinsAgo * 60 * 1000;
+      zone.rainfall.stoppedEpoch = stoppedMs;
+      zone.rainfall.isRaining = false;
+      zone.rainfall.intensity = profile.intensity;
+      zone.rainfall.intensityLevel = profile.intensityLevel;
+
+      const stoppedDate = new Date(stoppedMs);
+      const hh = String(stoppedDate.getHours()).padStart(2, '0');
+      const mm = String(stoppedDate.getMinutes()).padStart(2, '0');
+      zone.rainfall.stoppedTime = `${hh}:${mm} น.`;
+      zone.rainfall.durationText = profile.durationText;
+      zone.rainfall.radarForecast = profile.radarForecast;
+    }
+  });
+
+  updatePriorityZonesRainData(baseTime);
+}
+
+function updatePriorityZonesRainData(currentTime = new Date()) {
+  const zones = dashboardState.data.priorityZones;
+  if (!zones || zones.length === 0) return;
+
+  zones.forEach(zone => {
+    const profile = ZONE_RAIN_PROFILES[zone.id];
+    if (!profile || !zone.rainfall) return;
+
+    if (zone.rainfall.isRaining) {
+      if (!zone.rainfall.startEpoch) {
+        zone.rainfall.startEpoch = currentTime.getTime() - profile.initialMinsAgo * 60 * 1000;
+      }
+
+      // Re-confirm start time text
+      const startDate = new Date(zone.rainfall.startEpoch);
+      const sHh = String(startDate.getHours()).padStart(2, '0');
+      const sMm = String(startDate.getMinutes()).padStart(2, '0');
+      zone.rainfall.startTime = `${sHh}:${sMm} น.`;
+
+      // คำนวณนาทีที่ฝนตกจริงนับจากเวลาเริ่มตกจนถึงเวลาปัจจุบัน
+      const elapsedMins = Math.max(10, Math.floor((currentTime.getTime() - zone.rainfall.startEpoch) / 60000));
+      zone.rainfall.durationMinutes = elapsedMins;
+
+      const hours = Math.floor(elapsedMins / 60);
+      const mins = elapsedMins % 60;
+      let durationStr = "ตกมาแล้ว ";
+      if (hours > 0) durationStr += `${hours} ชม. `;
+      durationStr += `${mins} นาที`;
+      zone.rainfall.durationText = durationStr;
+
+      // ปรับเวลาพยากรณ์เรดาร์ในอนาคตให้อัปเดตตามเวลาปัจจุบันเสมอ
+      if (profile.forecastMinsAhead && profile.getForecast) {
+        const forecastDate = new Date(currentTime.getTime() + profile.forecastMinsAhead * 60 * 1000);
+        const fHh = String(forecastDate.getHours()).padStart(2, '0');
+        const fMm = String(forecastDate.getMinutes()).padStart(2, '0');
+        zone.rainfall.radarForecast = profile.getForecast(`${fHh}:${fMm}`);
+      }
+    } else {
+      // โซนที่ฝนหยุดตกแล้ว
+      if (!zone.rainfall.stoppedEpoch) {
+        zone.rainfall.stoppedEpoch = currentTime.getTime() - profile.stoppedMinsAgo * 60 * 1000;
+      }
+      const stoppedDate = new Date(zone.rainfall.stoppedEpoch);
+      const stHh = String(stoppedDate.getHours()).padStart(2, '0');
+      const stMm = String(stoppedDate.getMinutes()).padStart(2, '0');
+      zone.rainfall.stoppedTime = `${stHh}:${stMm} น.`;
+      zone.rainfall.durationText = profile.durationText;
+      zone.rainfall.radarForecast = profile.radarForecast;
+    }
+  });
+
+  // อัปเดตเวลาบนหัวข้อ Priority Zones
+  const syncBadge = document.getElementById("priority-sync-time");
+  if (syncBadge) {
+    const hh = String(currentTime.getHours()).padStart(2, '0');
+    const mm = String(currentTime.getMinutes()).padStart(2, '0');
+    const ss = String(currentTime.getSeconds()).padStart(2, '0');
+    syncBadge.innerText = `${hh}:${mm}:${ss} น.`;
+  }
 }
 
 function updatePeaReportsDynamicData(baseTime = new Date()) {

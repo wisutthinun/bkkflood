@@ -397,6 +397,24 @@ body {
   color: #fca5a5;
 }
 
+.priority-sync-pill {
+  font-size: 0.78rem;
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.priority-sync-pill strong {
+  color: #7dd3fc;
+  font-family: monospace;
+}
+
 .priority-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
