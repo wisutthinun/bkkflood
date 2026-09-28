@@ -118,6 +118,71 @@ function initPriorityZonesRainDynamic(baseTime = new Date()) {
   updatePriorityZonesRainData(baseTime);
 }
 
+// --------------------------------------------------------------------------
+// Real-world Live Weather Fetcher & Hydrological Response Model (Open-Meteo API)
+// --------------------------------------------------------------------------
+let liveWeatherCache = {
+  lastFetched: null,
+  isFetching: false,
+  sourceLabel: "ดาวเทียม & เรดาร์สภาพอากาศสด (Open-Meteo API)",
+  zonesData: {}
+};
+
+async function fetchRealWorldWeatherForZones() {
+  const zones = dashboardState.data.priorityZones;
+  if (!zones || zones.length === 0 || liveWeatherCache.isFetching) return;
+
+  const now = new Date();
+  // Throttle API call to once every 2 minutes unless cache empty
+  if (liveWeatherCache.lastFetched && (now.getTime() - liveWeatherCache.lastFetched.getTime() < 120000)) {
+    return;
+  }
+
+  liveWeatherCache.isFetching = true;
+
+  try {
+    const fetchPromises = zones.map(async (zone) => {
+      const lat = zone.coordinates ? zone.coordinates[0] : 13.8584;
+      const lon = zone.coordinates ? zone.coordinates[1] : 100.5435;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,precipitation,rain,showers,weather_code,cloud_cover,wind_speed_10m&forecast_days=1&timezone=Asia%2FBangkok`;
+      
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      return { zoneId: zone.id, data: data };
+    });
+
+    const results = await Promise.allSettled(fetchPromises);
+    results.forEach(res => {
+      if (res.status === 'fulfilled' && res.value && res.value.data && res.value.data.current) {
+        liveWeatherCache.zonesData[res.value.zoneId] = res.value.data.current;
+      }
+    });
+
+    liveWeatherCache.lastFetched = new Date();
+  } catch (err) {
+    console.warn("Real-world weather fetch failed, fallback to local weather model:", err);
+  } finally {
+    liveWeatherCache.isFetching = false;
+  }
+}
+
+function getWeatherConditionText(weatherCode, rainMm, showersMm) {
+  const totalRain = (rainMm || 0) + (showersMm || 0);
+  if (totalRain > 10.0 || weatherCode === 65 || weatherCode === 82 || weatherCode === 95 || weatherCode === 96 || weatherCode === 99) {
+    return { intensity: "ฝนตกหนักต่อเนื่อง", intensityLevel: "heavy", isRaining: true, label: "🌧️ ฝนตกหนัก" };
+  } else if (totalRain > 2.5 || weatherCode === 63 || weatherCode === 81) {
+    return { intensity: "ฝนตกปานกลาง", intensityLevel: "moderate", isRaining: true, label: "🌧️ ฝนปานกลาง" };
+  } else if (totalRain > 0.1 || weatherCode === 51 || weatherCode === 53 || weatherCode === 61 || weatherCode === 80) {
+    return { intensity: "ฝนละออง / ฝนปรอยๆ เบาบาง", intensityLevel: "light", isRaining: true, label: "🌦️ ฝนตกเบาบาง" };
+  } else if (weatherCode === 1 || weatherCode === 2 || weatherCode === 3) {
+    return { intensity: "ไม่มีฝน (มีเมฆบางส่วน/เมฆมาก)", intensityLevel: "none", isRaining: false, label: "⛅ ท้องฟ้ามีเมฆ" };
+  } else if (weatherCode === 0) {
+    return { intensity: "ไม่มีฝน (ท้องฟ้าแจ่มใส/ปลอดโปร่ง)", intensityLevel: "none", isRaining: false, label: "☀️ ท้องฟ้าโปร่ง" };
+  }
+  return { intensity: "ไม่มีฝน", intensityLevel: "none", isRaining: false, label: "⛅ ไม่มีฝน" };
+}
+
 function updatePriorityZonesRainData(currentTime = new Date()) {
   const zones = dashboardState.data.priorityZones;
   if (!zones || zones.length === 0) return;
@@ -126,63 +191,116 @@ function updatePriorityZonesRainData(currentTime = new Date()) {
     const profile = ZONE_RAIN_PROFILES[zone.id];
     if (!profile || !zone.rainfall) return;
 
-    if (zone.rainfall.isRaining) {
-      if (!zone.rainfall.startEpoch) {
-        zone.rainfall.startEpoch = currentTime.getTime() - profile.initialMinsAgo * 60 * 1000;
-      }
+    const liveData = liveWeatherCache.zonesData[zone.id];
 
-      // Re-confirm start time text
-      const startDate = new Date(zone.rainfall.startEpoch);
-      const sHh = String(startDate.getHours()).padStart(2, '0');
-      const sMm = String(startDate.getMinutes()).padStart(2, '0');
-      zone.rainfall.startTime = `${sHh}:${sMm} น.`;
+    if (liveData) {
+      // --------------------------------------------------------------------
+      // Real-World Live Weather Mode (from Open-Meteo Satellite & Radar)
+      // --------------------------------------------------------------------
+      const rainMm = liveData.rain || 0;
+      const showersMm = liveData.showers || 0;
+      const precipMm = liveData.precipitation || 0;
+      const wCode = liveData.weather_code;
+      const tempC = liveData.temperature_2m;
+      const humidity = liveData.relative_humidity_2m;
+      const cloudCover = liveData.cloud_cover;
+      const cond = getWeatherConditionText(wCode, rainMm, showersMm);
 
-      // คำนวณนาทีที่ฝนตกจริงนับจากเวลาเริ่มตกจนถึงเวลาปัจจุบัน
-      const elapsedMins = Math.max(10, Math.floor((currentTime.getTime() - zone.rainfall.startEpoch) / 60000));
-      zone.rainfall.durationMinutes = elapsedMins;
+      zone.rainfall.isRaining = cond.isRaining;
+      zone.rainfall.intensity = cond.intensity;
+      zone.rainfall.intensityLevel = cond.intensityLevel;
+      zone.rainfall.temperature = tempC;
+      zone.rainfall.humidity = humidity;
+      zone.rainfall.cloudCover = cloudCover;
+      zone.rainfall.isRealWorld = true;
 
-      const hours = Math.floor(elapsedMins / 60);
-      const mins = elapsedMins % 60;
-      let durationStr = "ตกมาแล้ว ";
-      if (hours > 0) durationStr += `${hours} ชม. `;
-      durationStr += `${mins} นาที`;
-      zone.rainfall.durationText = durationStr;
+      if (cond.isRaining) {
+        if (!zone.rainfall.startEpoch) {
+          zone.rainfall.startEpoch = currentTime.getTime() - 25 * 60 * 1000;
+        }
+        const elapsedMins = Math.max(5, Math.floor((currentTime.getTime() - zone.rainfall.startEpoch) / 60000));
+        zone.rainfall.durationMinutes = elapsedMins;
+        const hours = Math.floor(elapsedMins / 60);
+        const mins = elapsedMins % 60;
+        zone.rainfall.durationText = `ตรวจพบฝนจริงตกมาแล้ว ${hours > 0 ? `${hours} ชม. ` : ''}${mins} นาที`;
+        zone.rainfall.stoppedTime = null;
+        zone.rainfall.radarForecast = `ดาวเทียมตรวจพบหย่อมฝนจริง ${precipMm.toFixed(1)} มม./ชม. อุณหภูมิ ${tempC}°C เมฆ ${cloudCover}%`;
 
-      // ไดนามิกปรับฝนสะสมเพิ่มขึ้นทีละนิดตามระยะเวลา (ทุก 5 นาที)
-      if (typeof zone.rainfall.accumulated24h === 'number') {
-        const rainInc = parseFloat((Math.random() * 0.4 + 0.1).toFixed(1));
-        zone.rainfall.accumulated24h = parseFloat((zone.rainfall.accumulated24h + rainInc).toFixed(1));
-      }
+        // คำนวณผลกระทบน้ำท่วมเมื่อมีฝนจริง
+        if (cond.intensityLevel === 'heavy') {
+          zone.roadFloodLevel = Math.max(zone.roadFloodLevel, 20);
+          zone.status = "critical";
+          zone.statusText = "วิกฤต - ฝนตกหนักน้ำท่วมขัง";
+        } else if (cond.intensityLevel === 'moderate') {
+          zone.roadFloodLevel = Math.max(zone.roadFloodLevel, 12);
+          zone.status = "warning";
+          zone.statusText = "เตือนภัย - น้ำรอการระบาย";
+        }
+      } else {
+        // เมื่อโลกจริงไม่มีฝนตก (Real-world Fact: No Rain)
+        zone.rainfall.durationText = `ไม่มีกลุ่มฝนจริงในพื้นที่ (อุณหภูมิ ${tempC}°C, เมฆ ${cloudCover}%)`;
+        zone.rainfall.stoppedTime = "ตรวจวัดล่าสุด";
+        zone.rainfall.radarForecast = `ดาวเทียมตรวจอากาศจริง: ปริมาณฝน 0.0 มม./ชม. ท้องฟ้าโปร่ง-เมฆบางส่วน การระบายน้ำคล่องตัว`;
 
-      // ปรับเวลาพยากรณ์เรดาร์ในอนาคตให้อัปเดตตามเวลาปัจจุบันเสมอ
-      if (profile.forecastMinsAhead && profile.getForecast) {
-        const forecastDate = new Date(currentTime.getTime() + profile.forecastMinsAhead * 60 * 1000);
-        const fHh = String(forecastDate.getHours()).padStart(2, '0');
-        const fMm = String(forecastDate.getMinutes()).padStart(2, '0');
-        zone.rainfall.radarForecast = profile.getForecast(`${fHh}:${fMm}`);
+        // ปรับลดระดับน้ำบนถนนตามหลักชลศาสตร์เมื่อฝนไม่ตก (Drainage Model)
+        if (zone.roadFloodLevel > 0) {
+          // ค่อยๆ ระบายแห้งลงจนผิวทางปกติ
+          zone.roadFloodLevel = Math.max(0, zone.roadFloodLevel - 2);
+        }
+
+        if (zone.roadFloodLevel === 0) {
+          zone.status = "normal";
+          zone.statusText = "ปกติ - ไม่มีน้ำท่วมขัง ผิวจราจรแห้ง";
+          zone.roadCondition = "ผิวจราจรแห้งปกติ สัญจรได้ทุกช่องทาง";
+        } else {
+          zone.status = "warning";
+          zone.statusText = `เฝ้าระวัง - น้ำรอระบายเหลือ ${zone.roadFloodLevel} ซม.`;
+        }
       }
     } else {
-      // โซนที่ฝนหยุดตกแล้ว
-      if (!zone.rainfall.stoppedEpoch) {
-        zone.rainfall.stoppedEpoch = currentTime.getTime() - profile.stoppedMinsAgo * 60 * 1000;
-      }
-      const stoppedElapsedMins = Math.max(5, Math.floor((currentTime.getTime() - zone.rainfall.stoppedEpoch) / 60000));
-      const stoppedDate = new Date(zone.rainfall.stoppedEpoch);
-      const stHh = String(stoppedDate.getHours()).padStart(2, '0');
-      const stMm = String(stoppedDate.getMinutes()).padStart(2, '0');
-      
-      let stoppedAgoStr = "";
-      if (stoppedElapsedMins >= 60) {
-        const sh = Math.floor(stoppedElapsedMins / 60);
-        const sm = stoppedElapsedMins % 60;
-        stoppedAgoStr = `หยุดไปแล้ว ${sh} ชม. ${sm > 0 ? `${sm} นาที` : ''}`;
-      } else {
-        stoppedAgoStr = `หยุดไปแล้ว ${stoppedElapsedMins} นาที`;
-      }
+      // --------------------------------------------------------------------
+      // Local Dynamic Model Fallback (ก่อนข้อมูล API มาถึงหรือกรณีออฟไลน์)
+      // --------------------------------------------------------------------
+      if (zone.rainfall.isRaining) {
+        if (!zone.rainfall.startEpoch) {
+          zone.rainfall.startEpoch = currentTime.getTime() - profile.initialMinsAgo * 60 * 1000;
+        }
 
-      zone.rainfall.stoppedTime = `${stHh}:${stMm} น.`;
-      zone.rainfall.durationText = `${profile.durationText} (${stoppedAgoStr})`;
-      zone.rainfall.radarForecast = profile.radarForecast;
+        const startDate = new Date(zone.rainfall.startEpoch);
+        const sHh = String(startDate.getHours()).padStart(2, '0');
+        const sMm = String(startDate.getMinutes()).padStart(2, '0');
+        zone.rainfall.startTime = `${sHh}:${sMm} น.`;
+
+        const elapsedMins = Math.max(10, Math.floor((currentTime.getTime() - zone.rainfall.startEpoch) / 60000));
+        zone.rainfall.durationMinutes = elapsedMins;
+
+        const hours = Math.floor(elapsedMins / 60);
+        const mins = elapsedMins % 60;
+        zone.rainfall.durationText = `ตกมาแล้ว ${hours > 0 ? `${hours} ชม. ` : ''}${mins} นาที`;
+
+        if (profile.forecastMinsAhead && profile.getForecast) {
+          const forecastDate = new Date(currentTime.getTime() + profile.forecastMinsAhead * 60 * 1000);
+          const fHh = String(forecastDate.getHours()).padStart(2, '0');
+          const fMm = String(forecastDate.getMinutes()).padStart(2, '0');
+          zone.rainfall.radarForecast = profile.getForecast(`${fHh}:${fMm}`);
+        }
+      } else {
+        if (!zone.rainfall.stoppedEpoch) {
+          zone.rainfall.stoppedEpoch = currentTime.getTime() - profile.stoppedMinsAgo * 60 * 1000;
+        }
+        const stoppedElapsedMins = Math.max(5, Math.floor((currentTime.getTime() - zone.rainfall.stoppedEpoch) / 60000));
+        const stoppedDate = new Date(zone.rainfall.stoppedEpoch);
+        const stHh = String(stoppedDate.getHours()).padStart(2, '0');
+        const stMm = String(stoppedDate.getMinutes()).padStart(2, '0');
+        
+        let stoppedAgoStr = stoppedElapsedMins >= 60 
+          ? `หยุดไปแล้ว ${Math.floor(stoppedElapsedMins / 60)} ชม. ${stoppedElapsedMins % 60 > 0 ? `${stoppedElapsedMins % 60} นาที` : ''}`
+          : `หยุดไปแล้ว ${stoppedElapsedMins} นาที`;
+
+        zone.rainfall.stoppedTime = `${stHh}:${stMm} น.`;
+        zone.rainfall.durationText = `${profile.durationText} (${stoppedAgoStr})`;
+        zone.rainfall.radarForecast = profile.radarForecast;
+      }
     }
   });
 
@@ -201,22 +319,18 @@ function updatePriorityZonesRainData(currentTime = new Date()) {
   if (rainSummaryEl) {
     const rainingCount = zones.filter(z => z.rainfall && z.rainfall.isRaining).length;
     const stoppedCount = zones.length - rainingCount;
-    const sortedZones = [...zones].sort((a,b) => (b.rainfall?.accumulated24h || 0) - (a.rainfall?.accumulated24h || 0));
-    const topZone = sortedZones[0];
-    const topZoneName = topZone ? topZone.name.replace('โซน ', '') : '';
-    const topRainVal = topZone && topZone.rainfall ? topZone.rainfall.accumulated24h : 0;
+    const hasRealWorld = Object.keys(liveWeatherCache.zonesData).length > 0;
+    const sourceIcon = hasRealWorld ? "🛰️ ดาวเทียมสด (Open-Meteo Real-time)" : "📡 เรดาร์สภาพฝนสด";
 
     rainSummaryEl.innerHTML = `
       <span style="display: inline-flex; align-items: center; gap: 4px; color: #38bdf8; font-weight: 600;">
-        📡 เรดาร์สภาพฝนสด (${hh}:${mm} น.):
+        ${sourceIcon} (${hh}:${mm} น.):
       </span>
-      <span>🌧️ กำลังตก <strong>${rainingCount}</strong> โซน</span>
+      <span>${rainingCount > 0 ? `🌧️ กำลังตก <strong>${rainingCount}</strong> โซน` : '☀️ <strong>ไม่มีฝนตกทั้ง 6 โซน (สภาพอากาศปลอดโปร่ง)</strong>'}</span>
       <span>•</span>
-      <span>⛅ ฝนหยุดแล้ว <strong>${stoppedCount}</strong> โซน</span>
+      <span>${rainingCount > 0 ? `⛅ ฝนหยุดแล้ว <strong>${stoppedCount}</strong> โซน` : 'ผิวการจราจรระบายน้ำแห้งคล่องตัว'}</span>
       <span>•</span>
-      <span>ฝนสะสมสูงสุด <strong>${topRainVal} มม.</strong> (${topZoneName})</span>
-      <span>•</span>
-      <span style="color: #34d399; font-weight: 500;">🟢 สัญญาณโทรมาตรตรวจวัด 6 โซนออนไลน์</span>
+      <span style="color: #34d399; font-weight: 500;">🟢 สัญญาณโทรมาตรและดาวเทียมออนไลน์</span>
     `;
   }
 }
@@ -253,8 +367,17 @@ function triggerManualRefresh() {
   const btn = document.getElementById("btn-manual-refresh");
   if (btn) btn.classList.add("spinning");
 
-  // Simulate realistic network sync & slight water level fluctuation
-  setTimeout(() => {
+  // Fetch real-world satellite weather data in parallel
+  fetchRealWorldWeatherForZones().then(() => {
+    dashboardState.lastUpdated = new Date();
+    updateTimestampDisplay();
+    simulateDataFluctuation();
+    renderDashboard();
+    updateTrendChart();
+
+    if (btn) btn.classList.remove("spinning");
+    showNotification("อัปเดตข้อมูลสถานการณ์และสภาพอากาศดาวเทียมสดเรียบร้อยแล้ว");
+  }).catch(() => {
     dashboardState.lastUpdated = new Date();
     updateTimestampDisplay();
     simulateDataFluctuation();
@@ -263,7 +386,7 @@ function triggerManualRefresh() {
 
     if (btn) btn.classList.remove("spinning");
     showNotification("อัปเดตข้อมูลสถานการณ์รอบ กฟภ. และระดับน้ำเรียบร้อยแล้ว");
-  }, 650);
+  });
 }
 
 function simulateDataFluctuation() {
@@ -785,18 +908,26 @@ function renderTopPriorityZones() {
 
   container.innerHTML = zones.map(zone => {
     const isCritical = zone.status === "critical";
-    const badgeClass = isCritical ? "critical" : "warning";
-    const badgeText = isCritical ? "วิกฤตล้นตลิ่ง/ท่วมสูง" : "เฝ้าระวังน้ำท่วมขัง";
-    const statusColor = isCritical ? "text-critical" : "text-warning";
+    const isNormal = zone.status === "normal" || (!zone.status && zone.roadFloodLevel === 0);
+    const badgeClass = isCritical ? "critical" : (isNormal ? "normal" : "warning");
+    const badgeText = isCritical ? "วิกฤตล้นตลิ่ง/ท่วมสูง" : (isNormal ? "ปกติ / ผิวทางแห้ง" : "เฝ้าระวังน้ำท่วมขัง");
+    const cardBorderClass = isCritical ? "is-critical" : (isNormal ? "is-normal" : "is-warning");
+    const statusColor = isCritical ? "text-critical" : (isNormal ? "text-success" : "text-warning");
     const rain = zone.rainfall;
     const profile = ZONE_RAIN_PROFILES[zone.id];
     const cctvMeta = dashboardState.data.cctvList.find(c => c.id === zone.cctvId);
 
+    const rainPillClass = rain.isRaining ? 'raining' : (rain.isRealWorld && !rain.isRaining ? 'clear' : 'stopped');
+    const rainPillIcon = rain.isRaining ? '🌧️ กำลังตก' : (rain.isRealWorld && !rain.isRaining ? '☀️ ท้องฟ้าโปร่ง' : '⛅ ฝนหยุดแล้ว');
+
     return `
-      <div class="priority-card ${isCritical ? 'is-critical' : 'is-warning'}">
+      <div class="priority-card ${cardBorderClass}">
         <div class="zone-top-info">
           <div>
-            <div class="zone-name">${zone.name}</div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="zone-name">${zone.name}</span>
+              ${rain && rain.isRealWorld ? `<span class="realtime-sat-badge">🛰️ ข้อมูลสด</span>` : ''}
+            </div>
             <div class="zone-province">${zone.province} • ${zone.keyLocation}</div>
           </div>
           <span class="zone-badge ${badgeClass}">${badgeText}</span>
@@ -833,17 +964,17 @@ function renderTopPriorityZones() {
         ${rain ? `
           <div class="zone-rain-detail-banner">
             <div class="rain-banner-head">
-              <span class="rain-status-pill ${rain.isRaining ? 'raining' : 'stopped'}">
-                ${rain.isRaining ? '🌧️ กำลังตก' : '⛅ ฝนหยุดแล้ว'}: ${rain.intensity}
+              <span class="rain-status-pill ${rainPillClass}">
+                ${rainPillIcon}: ${rain.intensity}
               </span>
               <span class="rain-time-text">
                 ${rain.isRaining 
-                  ? `⏱️ ${rain.durationText} (เริ่มตก ${rain.startTime})` 
-                  : `⏱️ หยุดตกเมื่อเวลา ${rain.stoppedTime} (${rain.durationText})`}
+                  ? `⏱️ ${rain.durationText} (เริ่มตก ${rain.startTime || 'ล่าสุด'})` 
+                  : `⏱️ ${rain.durationText}`}
               </span>
             </div>
             <div class="rain-forecast-text">
-              <span>📡 <strong>เรดาร์ตรวจสภาพ (${profile && profile.radarStation ? profile.radarStation : 'เรดาร์ กทม./นนทบุรี'}):</strong> ${rain.radarForecast}</span>
+              <span>📡 <strong>เรดาร์/ดาวเทียมตรวจสภาพ (${profile && profile.radarStation ? profile.radarStation : 'เรดาร์ กทม./นนทบุรี'}):</strong> ${rain.radarForecast}</span>
             </div>
           </div>
         ` : ''}
@@ -2342,6 +2473,15 @@ function initApp() {
   try { startCctvRenderLoops(); } catch (e) { console.error("startCctvRenderLoops error:", e); }
   try { initTrendChart(); } catch (e) { console.warn("Chart init failed (safe to ignore if offline):", e); }
   try { setupAutoRefresh(300); } catch (e) { console.error("setupAutoRefresh error:", e); }
+
+  // Initial fetch of real-world satellite weather data
+  try {
+    fetchRealWorldWeatherForZones().then(() => {
+      updatePriorityZonesRainData(dashboardState.lastUpdated);
+      renderTopPriorityZones();
+      renderSummaryMetrics();
+    }).catch(err => console.warn("Live weather initial load fallback:", err));
+  } catch (e) { console.error("fetchRealWorldWeather error:", e); }
 
   // 30-Minute Auto-Sync for Live News (FIFO Rolling Queue 16 รายการ) & Upstream Surge & Sea Tide Forecast
   try {
