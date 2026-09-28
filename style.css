@@ -873,6 +873,50 @@ body {
   color: #cbd5e1;
 }
 
+.priority-source-pill {
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #c7d2fe;
+  font-size: 0.72rem;
+  padding: 2px 9px;
+  border-radius: 9999px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.priority-card-footer {
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed rgba(75, 95, 135, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.71rem;
+}
+
+.priority-source-tag {
+  color: #c7d2fe;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.35;
+}
+
+.priority-sync-tag {
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.priority-status-live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ==========================================================================
    Tab Navigation & Filter Controls
    ========================================================================== */
@@ -2276,10 +2320,83 @@ body {
   letter-spacing: 0.5px;
 }
 
+.convergence-status-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.convergence-status-pill.status-live {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+  animation: pulse-dot-anim 1.5s infinite;
+}
+.convergence-status-pill.status-imminent {
+  background: #d97706;
+  color: #ffffff;
+}
+.convergence-status-pill.status-watch {
+  background: #2563eb;
+  color: #ffffff;
+}
+.convergence-status-pill.status-passed {
+  background: #059669;
+  color: #ffffff;
+}
+
+.convergence-datetime-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f1f5f9;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  margin-left: auto;
+}
+
 .convergence-time {
   font-size: 0.82rem;
   font-weight: 700;
   color: #fca5a5;
+}
+
+.convergence-window-box {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  margin: 0.5rem 0 0.65rem 0;
+}
+
+.convergence-window-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.84rem;
+}
+
+.cwb-timerange {
+  color: #fca5a5;
+  font-size: 0.92rem;
+}
+
+.cwb-peak-pill {
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  font-size: 0.74rem;
+  padding: 2px 7px;
+  border-radius: 4px;
 }
 
 .convergence-title {
@@ -2294,6 +2411,27 @@ body {
   font-size: 0.82rem;
   color: #cbd5e1;
   line-height: 1.5;
+}
+
+.convergence-footer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.85rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+@media (max-width: 768px) {
+  .convergence-datetime-badge {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* Subheadings */

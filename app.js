@@ -27,6 +27,7 @@ var ZONE_RAIN_PROFILES = {
     intensity: "ฝนตกปานกลาง",
     intensityLevel: "moderate",
     forecastMinsAhead: 25,
+    radarStation: "เรดาร์หนองจอก / ดอนเมือง",
     getForecast: (timeStr) => `คาดว่ากลุ่มฝนจะเคลื่อนตัวผ่านพ้นช่วงเวลา ${timeStr} น.`
   },
   "prachachuen": {
@@ -35,7 +36,8 @@ var ZONE_RAIN_PROFILES = {
     intensity: "ฝนหยุดตกแล้ว",
     intensityLevel: "none",
     durationText: "ตกต่อเนื่องรวม 1 ชม. 45 นาที",
-    radarForecast: "กลุ่มฝนสลายตัวแล้ว ไม่มีเมฆฝนใหม่เข้าพื้นที่"
+    radarStation: "เรดาร์หนองแขม",
+    radarForecast: "กลุ่มฝนสลายตัวแล้ว ไม่มีเมฆฝนใหม่เข้าปกคลุม ผิวจราจรกำลังระบายน้ำลงสู่คลองประปา"
   },
   "chaengwattana": {
     initialMinsAgo: 165, // ตกมาแล้ว 2 ชม. 45 นาที
@@ -43,6 +45,7 @@ var ZONE_RAIN_PROFILES = {
     intensity: "ฝนตกหนักต่อเนื่อง",
     intensityLevel: "heavy",
     forecastMinsAhead: 45,
+    radarStation: "เรดาร์ดอนเมือง / สายไหม",
     getForecast: (timeStr) => `กลุ่มฝนฟ้าคะนองหนาแน่น คาดตกต่อเนื่องถึงเวลา ${timeStr} น.`
   },
   "kasetsart": {
@@ -51,6 +54,7 @@ var ZONE_RAIN_PROFILES = {
     intensity: "ฝนปรอยๆ เบาบาง",
     intensityLevel: "light",
     forecastMinsAhead: 20,
+    radarStation: "เรดาร์ดอนเมือง",
     getForecast: (timeStr) => `เมฆฝนเริ่มเบาบาง คาดว่าจะหยุดตกช่วงเวลา ${timeStr} น.`
   },
   "muang-nonthaburi": {
@@ -59,6 +63,7 @@ var ZONE_RAIN_PROFILES = {
     intensity: "ฝนตกปานกลาง",
     intensityLevel: "moderate",
     forecastMinsAhead: 30,
+    radarStation: "เรดาร์เทศบาลนครนนทบุรี",
     getForecast: (timeStr) => `กลุ่มฝนยังคงปกคลุมเขตเทศบาล คาดเบาบางลงหลัง ${timeStr} น.`
   },
   "chinkhet": {
@@ -67,6 +72,7 @@ var ZONE_RAIN_PROFILES = {
     intensity: "ฝนตกปานกลาง",
     intensityLevel: "moderate",
     forecastMinsAhead: 25,
+    radarStation: "เรดาร์ สนง.ใหญ่ กฟภ. / ดอนเมือง",
     getForecast: (timeStr) => `กลุ่มฝนกำลังเคลื่อนตัวไปทางทิศตะวันออกเฉียงเหนือ คาดเบาบางลงราว ${timeStr} น.`
   }
 };
@@ -180,13 +186,38 @@ function updatePriorityZonesRainData(currentTime = new Date()) {
     }
   });
 
+  const hh = String(currentTime.getHours()).padStart(2, '0');
+  const mm = String(currentTime.getMinutes()).padStart(2, '0');
+  const ss = String(currentTime.getSeconds()).padStart(2, '0');
+
   // อัปเดตเวลาบนหัวข้อ Priority Zones
   const syncBadge = document.getElementById("priority-sync-time");
   if (syncBadge) {
-    const hh = String(currentTime.getHours()).padStart(2, '0');
-    const mm = String(currentTime.getMinutes()).padStart(2, '0');
-    const ss = String(currentTime.getSeconds()).padStart(2, '0');
     syncBadge.innerText = `${hh}:${mm}:${ss} น.`;
+  }
+
+  // อัปเดตแถบสรุปสถานะฝนตกสดของทั้ง 6 โซน
+  const rainSummaryEl = document.getElementById("priority-rain-summary");
+  if (rainSummaryEl) {
+    const rainingCount = zones.filter(z => z.rainfall && z.rainfall.isRaining).length;
+    const stoppedCount = zones.length - rainingCount;
+    const sortedZones = [...zones].sort((a,b) => (b.rainfall?.accumulated24h || 0) - (a.rainfall?.accumulated24h || 0));
+    const topZone = sortedZones[0];
+    const topZoneName = topZone ? topZone.name.replace('โซน ', '') : '';
+    const topRainVal = topZone && topZone.rainfall ? topZone.rainfall.accumulated24h : 0;
+
+    rainSummaryEl.innerHTML = `
+      <span style="display: inline-flex; align-items: center; gap: 4px; color: #38bdf8; font-weight: 600;">
+        📡 เรดาร์สภาพฝนสด (${hh}:${mm} น.):
+      </span>
+      <span>🌧️ กำลังตก <strong>${rainingCount}</strong> โซน</span>
+      <span>•</span>
+      <span>⛅ ฝนหยุดแล้ว <strong>${stoppedCount}</strong> โซน</span>
+      <span>•</span>
+      <span>ฝนสะสมสูงสุด <strong>${topRainVal} มม.</strong> (${topZoneName})</span>
+      <span>•</span>
+      <span style="color: #34d399; font-weight: 500;">🟢 สัญญาณโทรมาตรตรวจวัด 6 โซนออนไลน์</span>
+    `;
   }
 }
 
@@ -290,12 +321,75 @@ function simulateDataFluctuation() {
     }
   }
 
-  // Dynamic update for Priority Zones Rain Data, Canals, Roads, CCTV Surface Detection & PEA Recent Situation Reports
+  // Dynamic update for Priority Zones Rain Data, Canals, Roads, CCTV Surface Detection, PEA Recent Reports & Live Flood News
   updatePriorityZonesRainData(dashboardState.lastUpdated);
   updateCanalsDynamicData(dashboardState.lastUpdated);
   updateRoadsDynamicData(dashboardState.lastUpdated);
   updateCctvDynamicData(dashboardState.lastUpdated);
   updatePeaReportsDynamicData(dashboardState.lastUpdated);
+
+  // Dynamic 30-minute FIFO rolling update for Live Flood News (16 รายการ)
+  const currentNowMs = (dashboardState.lastUpdated || new Date()).getTime();
+  const lastNewsMs = dashboardState.lastLiveNewsUpdated ? dashboardState.lastLiveNewsUpdated.getTime() : 0;
+  if (!dashboardState.lastLiveNewsUpdated || (currentNowMs - lastNewsMs) >= 30 * 60 * 1000) {
+    updateLiveFloodNewsDynamicData(dashboardState.lastUpdated);
+  }
+}
+
+function formatPeaTimeAgo(minsAgo) {
+  if (minsAgo >= 60) {
+    const h = Math.floor(minsAgo / 60);
+    const m = minsAgo % 60;
+    return `${h} ชม. ${m > 0 ? `${m} นาที` : ''}ที่แล้ว`;
+  }
+  return `${minsAgo} นาทีที่แล้ว`;
+}
+
+function formatPeaSharedTime(baseTime, minsAgo) {
+  const reportDate = new Date(baseTime.getTime() - minsAgo * 60 * 1000);
+  const hh = String(reportDate.getHours()).padStart(2, '0');
+  const mm = String(reportDate.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm} น.`;
+}
+
+function buildPeaReportItem(item, minsAgo, baseTime, uniqueSeed) {
+  const depthDelta = Math.floor(Math.random() * 5) - 2; // -2 to +2 cm
+  const depth = Math.max(2, (item.baseWaterDepthCm || 12) + depthDelta);
+
+  let sev = item.severity;
+  let sevLabel = item.severityLabel;
+  let pass = item.passable;
+
+  if (depth >= 20) {
+    sev = "critical";
+    sevLabel = "น้ำท่วมสูง";
+    pass = "รถเล็กหลีกเลี่ยงเด็ดขาด รถยกสูงผ่านได้ชะลอตัว";
+  } else if (depth >= 12) {
+    sev = "moderate";
+    sevLabel = "น้ำท่วมผิวทางรอระบาย";
+    pass = "รถผ่านได้ ชะลอความเร็ว ระวังคลื่นน้ำ";
+  } else {
+    sev = "minor";
+    sevLabel = "น้ำปริ่มขอบทาง";
+    pass = "สัญจรได้คล่องตัวตามปกติ";
+  }
+
+  return {
+    id: `photo-pea-dyn-${uniqueSeed}-${Date.now().toString(36)}`,
+    title: item.title,
+    location: item.location,
+    timeAgo: formatPeaTimeAgo(minsAgo),
+    minutesAgo: minsAgo,
+    sharedTime: formatPeaSharedTime(baseTime, minsAgo),
+    reporter: item.reporter,
+    reporterRole: item.reporterRole,
+    waterDepthCm: depth,
+    severity: sev,
+    severityLabel: sevLabel,
+    passable: pass,
+    description: item.description,
+    source: item.source
+  };
 }
 
 function updatePeaReportsDynamicData(baseTime = new Date()) {
@@ -305,90 +399,167 @@ function updatePeaReportsDynamicData(baseTime = new Date()) {
 
   if (masterPool.length === 0) return;
 
-  // เลือกรอบจำนวนรายงานที่จะแสดง (เช่น 12-14 จุดที่แชร์ล่าสุดใน 3 ชม.)
-  const reportCount = 14;
-  
-  // สับเปลี่ยน (Shuffle) หรือหมุนเวียนรายงานใหม่ๆ มาแทนที่อันเดิมทุก 5 นาที
-  // เพื่อให้จุดเกิดเหตุ ข้อมูล และผู้รายงานมีการแชร์ใหม่ๆ เข้ามาทับอันเดิม
-  const shuffledPool = [...masterPool].sort(() => 0.5 - Math.random());
-  const selectedItems = shuffledPool.slice(0, reportCount);
+  const targetCount = 21;
+  let currentReports = dashboardState.data.peaRecentPhotos || [];
 
-  // การกระจายเวลาแชร์ภายใน 3 ชม. (ตั้งแต่ 5 นาที ถึง 175 นาทีที่แล้ว)
-  const minuteOffsets = [
-    5 + Math.floor(Math.random() * 5),   // ~5-9 นาที
-    14 + Math.floor(Math.random() * 6),  // ~14-19 นาที
-    23 + Math.floor(Math.random() * 7),  // ~23-29 นาที
-    35 + Math.floor(Math.random() * 8),  // ~35-42 นาที
-    48 + Math.floor(Math.random() * 8),  // ~48-55 นาที
-    62 + Math.floor(Math.random() * 10), // ~1 ชม. 2 นาที
-    76 + Math.floor(Math.random() * 10), // ~1 ชม. 16 นาที
-    91 + Math.floor(Math.random() * 10), // ~1 ชม. 31 นาที
-    106 + Math.floor(Math.random() * 10),// ~1 ชม. 46 นาที
-    121 + Math.floor(Math.random() * 10),// ~2 ชม. 1 นาที
-    135 + Math.floor(Math.random() * 10),// ~2 ชม. 15 นาที
-    148 + Math.floor(Math.random() * 10),// ~2 ชม. 28 นาที
-    160 + Math.floor(Math.random() * 8), // ~2 ชม. 40 นาที
-    171 + Math.floor(Math.random() * 6)  // ~2 ชม. 51 นาที
-  ];
+  // กรณีเริ่มระบบ หรือรายการยังไม่ครบ 21 รายการ ให้ตั้งค่าตั้งต้น 21 รายการกระจายตลอด 3 ชม.
+  if (!currentReports || currentReports.length < targetCount) {
+    const shuffled = [...masterPool].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, targetCount);
+    currentReports = selected.map((item, idx) => {
+      const step = 170 / (targetCount - 1);
+      const mins = Math.min(176, Math.max(4, Math.round(4 + idx * step + (Math.random() * 4 - 2))));
+      return buildPeaReportItem(item, mins, baseTime, idx + 1);
+    });
+    currentReports.sort((a, b) => a.minutesAgo - b.minutesAgo);
+  } else {
+    // 1. ตรวจสอบแหล่งข้อมูลและหัวข้อที่แสดงอยู่ด้านบน เพื่อดึงข้อมูลจาก Source ใหม่ๆ ที่ยังไม่ซ้ำ
+    const topRecentSources = new Set(currentReports.slice(0, 10).map(r => r.source));
+    const topRecentTitles = new Set(currentReports.slice(0, 10).map(r => r.title));
 
-  const newReports = selectedItems.map((item, idx) => {
-    const minsAgo = minuteOffsets[idx] || (idx * 12 + 7);
-    let timeAgoText = "";
-    if (minsAgo >= 60) {
-      const h = Math.floor(minsAgo / 60);
-      const m = minsAgo % 60;
-      timeAgoText = `${h} ชม. ${m > 0 ? `${m} นาที` : ''}ที่แล้ว`;
-    } else {
-      timeAgoText = `${minsAgo} นาทีที่แล้ว`;
+    // 2. คัดเลือกผู้สมัครรายการใหม่จาก Master Pool ที่มาจาก Source ใหม่ๆ
+    let freshCandidates = masterPool.filter(m => !topRecentSources.has(m.source) && !topRecentTitles.has(m.title));
+    if (freshCandidates.length === 0) {
+      const top5Titles = new Set(currentReports.slice(0, 5).map(r => r.title));
+      freshCandidates = masterPool.filter(m => !top5Titles.has(m.title));
+    }
+    if (freshCandidates.length === 0) freshCandidates = masterPool;
+
+    // สุ่มเลือก 1-2 รายงานใหม่ที่จะแชร์เข้ามาล่าสุด
+    const newItemsCount = Math.floor(Math.random() * 2) + 1; // 1-2 รายการใหม่
+    const shuffledCandidates = [...freshCandidates].sort(() => 0.5 - Math.random());
+    const newIncomingItems = shuffledCandidates.slice(0, newItemsCount);
+
+    // 3. ปรับอายุเวลาของรายงานเดิมที่มีอยู่ทั้งหมด (เพิ่มขึ้น 5 นาที ตามรอบการซิงค์)
+    currentReports.forEach(r => {
+      r.minutesAgo = (r.minutesAgo || 10) + 5;
+      r.timeAgo = formatPeaTimeAgo(r.minutesAgo);
+      r.sharedTime = formatPeaSharedTime(baseTime, r.minutesAgo);
+    });
+
+    // 4. สร้างรายงานใหม่สดๆ (ย้อนหลังเพียง 2-4 นาที) และนำมาแทรกไว้ "บนสุด" (unshift)
+    newIncomingItems.forEach((item, i) => {
+      const freshMins = Math.floor(Math.random() * 3) + 2; // 2 - 4 นาทีที่แล้ว
+      const newRep = buildPeaReportItem(item, freshMins, baseTime, `fresh-${Date.now()}-${i}`);
+      currentReports.unshift(newRep);
+    });
+
+    // 5. FIFO: ตัดรายการที่เก่าที่สุดท้ายแถวออก ให้คงเหลือแสดงผลแน่นอนที่ 21 รายการเสมอ
+    currentReports = currentReports.slice(0, targetCount);
+
+    // 6. ตรวจสอบให้แน่ใจว่าไม่มีรายการใดเก่าเกินกว่า 180 นาที (3 ชม.)
+    for (let i = 0; i < currentReports.length; i++) {
+      if (currentReports[i].minutesAgo > 180) {
+        const poolFiltered = masterPool.filter(m => !currentReports.some(cr => cr.title === m.title));
+        const replacer = poolFiltered[Math.floor(Math.random() * poolFiltered.length)] || masterPool[Math.floor(Math.random() * masterPool.length)];
+        const replacerMins = Math.floor(Math.random() * 30) + 140; // 140 - 170 นาที
+        currentReports[i] = buildPeaReportItem(replacer, replacerMins, baseTime, `repl-${i}`);
+      }
     }
 
-    const reportDate = new Date(baseTime.getTime() - minsAgo * 60 * 1000);
-    const hh = String(reportDate.getHours()).padStart(2, '0');
-    const mm = String(reportDate.getMinutes()).padStart(2, '0');
-    const sharedTime = `${hh}:${mm} น.`;
+    // จัดเรียงลำดับจากรายงานสดใหม่ล่าสุด ไปยังรายงานเก่าสุด
+    currentReports.sort((a, b) => a.minutesAgo - b.minutesAgo);
+  }
 
-    // Dynamic depth fluctuation based on item's baseWaterDepthCm
-    const depthDelta = Math.floor(Math.random() * 5) - 2; // -2 to +2 cm
-    const depth = Math.max(2, (item.baseWaterDepthCm || 12) + depthDelta);
+  dashboardState.data.peaRecentPhotos = currentReports;
+}
 
-    let sev = item.severity;
-    let sevLabel = item.severityLabel;
-    let pass = item.passable;
+// ==========================================================================
+// หมุนเวียนข่าว Live น้ำท่วม กทม. จาก Source ใหม่ๆ แทนที่รายการเก่าสุด (FIFO 16 รายการ ทุก 30 นาที)
+// ==========================================================================
+function updateLiveFloodNewsDynamicData(baseTime = new Date(), forceUpdate = false) {
+  const masterPool = (typeof LIVE_NEWS_MASTER_POOL !== 'undefined' && Array.isArray(LIVE_NEWS_MASTER_POOL))
+    ? LIVE_NEWS_MASTER_POOL
+    : [];
 
-    if (depth >= 20) {
-      sev = "critical";
-      sevLabel = "น้ำท่วมสูง";
-      pass = "รถเล็กหลีกเลี่ยงเด็ดขาด รถยกสูงผ่านได้ชะลอตัว";
-    } else if (depth >= 12) {
-      sev = "moderate";
-      sevLabel = "น้ำท่วมผิวทางรอระบาย";
-      pass = "รถผ่านได้ ชะลอความเร็ว ระวังคลื่นน้ำ";
-    } else {
-      sev = "minor";
-      sevLabel = "น้ำปริ่มขอบทาง";
-      pass = "สัญจรได้คล่องตัวตามปกติ";
+  const targetCount = 16;
+  let currentNews = dashboardState.data.liveFloodNews || [];
+
+  // Helper sort function: AlwaysLive first, then ongoing Live (offsetEndMins > 0) by most recently started, then ended by most recently ended
+  const sortNews = (list) => {
+    return [...list].sort((a, b) => {
+      const aAlways = a.isAlwaysLive ? 1 : 0;
+      const bAlways = b.isAlwaysLive ? 1 : 0;
+      if (aAlways !== bAlways) return bAlways - aAlways;
+
+      const aLive = (!a.isAlwaysLive && (a.offsetEndMins || 0) > 0) ? 1 : 0;
+      const bLive = (!b.isAlwaysLive && (b.offsetEndMins || 0) > 0) ? 1 : 0;
+      if (aLive !== bLive) return bLive - aLive;
+
+      if (aLive) {
+        return (b.offsetStartMins || 0) - (a.offsetStartMins || 0);
+      }
+
+      return (b.offsetEndMins || -180) - (a.offsetEndMins || -180);
+    });
+  };
+
+  // กรณีเริ่มระบบ หรือรายการยังไม่ครบ 16 รายการ ให้ดึงจาก masterPool หรือ initialData ให้ครบ 16 รายการ
+  if (!currentNews || currentNews.length < targetCount) {
+    if (masterPool.length > 0) {
+      currentNews = masterPool.slice(0, targetCount).map(item => JSON.parse(JSON.stringify(item)));
     }
+    dashboardState.data.liveFloodNews = sortNews(currentNews);
+    dashboardState.lastLiveNewsUpdated = baseTime;
+    return;
+  }
 
-    return {
-      id: `photo-pea-dyn-${idx + 1}-${Date.now().toString(36)}`,
-      title: item.title,
-      location: item.location,
-      timeAgo: timeAgoText,
-      minutesAgo: minsAgo,
-      sharedTime: sharedTime,
-      reporter: item.reporter,
-      reporterRole: item.reporterRole,
-      waterDepthCm: depth,
-      severity: sev,
-      severityLabel: sevLabel,
-      passable: pass,
-      description: item.description,
-      source: item.source
-    };
+  // 1. ตรวจสอบสถานีข่าวใน 8 รายการแรก เพื่อดึงจากสถานีข่าวใหม่ๆ ใน Master Pool ที่ยังไม่แสดงในส่วนบน
+  const topRecentStations = new Set(currentNews.slice(0, 8).map(n => n.station));
+  let freshCandidates = masterPool.filter(m => !topRecentStations.has(m.station));
+  if (freshCandidates.length === 0) {
+    const top3Stations = new Set(currentNews.slice(0, 3).map(n => n.station));
+    freshCandidates = masterPool.filter(m => !top3Stations.has(m.station));
+  }
+  if (freshCandidates.length === 0) freshCandidates = masterPool;
+
+  // 2. สุ่มเลือก 1-2 รายการใหม่ที่เพิ่งเปิดสตรีมสด หรือรายงานด่วนล่าสุดเข้ามา
+  const incomingCount = Math.floor(Math.random() * 2) + 1;
+  const shuffledCandidates = [...freshCandidates].sort(() => 0.5 - Math.random());
+  const newIncomingItems = shuffledCandidates.slice(0, incomingCount);
+
+  // 3. ปรับอายุเวลาของรายการเดิมที่มีอยู่ทั้งหมด (ลดทอนเวลาลง 30 นาที ตามรอบการซิงค์ 30 นาที)
+  currentNews.forEach(item => {
+    if (!item.isAlwaysLive) {
+      item.offsetStartMins = (typeof item.offsetStartMins === 'number' ? item.offsetStartMins : -30) - 30;
+      item.offsetEndMins = (typeof item.offsetEndMins === 'number' ? item.offsetEndMins : 0) - 30;
+    }
   });
 
-  // นำชุดรายงานใหม่ที่สุ่มได้มาทับ peaRecentPhotos ใน state ทันที
-  dashboardState.data.peaRecentPhotos = newReports;
+  // 4. ตั้งค่ารายการสดใหม่สดๆ (เพิ่งเริ่มถ่ายทอดสด 8-20 นาทีที่แล้ว และจะสดต่อไปอีก 25-60 นาที) แล้ว unshift เข้ามาบนสุด
+  newIncomingItems.forEach((cand) => {
+    const freshItem = JSON.parse(JSON.stringify(cand));
+    freshItem.isAlwaysLive = false;
+    freshItem.offsetStartMins = -Math.floor(Math.random() * 12 + 8);
+    freshItem.offsetEndMins = Math.floor(Math.random() * 35 + 25);
+    currentNews.unshift(freshItem);
+  });
+
+  // 5. จัดเรียงตามลำดับความสด (AlwaysLive & กำลังสดอยู่ด้านบน ตามด้วยรายการที่เพิ่งจบ)
+  currentNews = sortNews(currentNews);
+
+  // 6. FIFO: ตัดรายการที่เก่าที่สุดท้ายแถวออก ให้คงเหลือแสดงผลแน่นอนที่ 16 รายการเสมอ
+  currentNews = currentNews.slice(0, targetCount);
+
+  // 7. ตรวจสอบให้แน่ใจว่าไม่มีรายการใดเก่าเกินกว่า 180 นาที (3 ชม.)
+  for (let i = 0; i < currentNews.length; i++) {
+    if (!currentNews[i].isAlwaysLive && currentNews[i].offsetEndMins < -180) {
+      const activeStations = new Set(currentNews.map(n => n.station));
+      const poolFiltered = masterPool.filter(m => !activeStations.has(m.station));
+      const replacer = poolFiltered.length > 0 
+        ? poolFiltered[Math.floor(Math.random() * poolFiltered.length)] 
+        : masterPool[Math.floor(Math.random() * masterPool.length)];
+      const freshReplacer = JSON.parse(JSON.stringify(replacer));
+      freshReplacer.isAlwaysLive = false;
+      freshReplacer.offsetStartMins = -Math.floor(Math.random() * 30 + 130);
+      freshReplacer.offsetEndMins = -Math.floor(Math.random() * 40 + 80);
+      currentNews[i] = freshReplacer;
+    }
+  }
+
+  currentNews = sortNews(currentNews);
+  dashboardState.data.liveFloodNews = currentNews;
+  dashboardState.lastLiveNewsUpdated = baseTime;
 }
 
 function setupAutoRefresh(seconds) {
@@ -606,6 +777,11 @@ function renderTopPriorityZones() {
   if (!container) return;
 
   const zones = dashboardState.data.priorityZones;
+  const now = dashboardState.lastUpdated || new Date();
+  const sHh = String(now.getHours()).padStart(2, '0');
+  const sMm = String(now.getMinutes()).padStart(2, '0');
+  const sSs = String(now.getSeconds()).padStart(2, '0');
+  const syncTimeStr = `${sHh}:${sMm}:${sSs} น.`;
 
   container.innerHTML = zones.map(zone => {
     const isCritical = zone.status === "critical";
@@ -613,6 +789,7 @@ function renderTopPriorityZones() {
     const badgeText = isCritical ? "วิกฤตล้นตลิ่ง/ท่วมสูง" : "เฝ้าระวังน้ำท่วมขัง";
     const statusColor = isCritical ? "text-critical" : "text-warning";
     const rain = zone.rainfall;
+    const profile = ZONE_RAIN_PROFILES[zone.id];
     const cctvMeta = dashboardState.data.cctvList.find(c => c.id === zone.cctvId);
 
     return `
@@ -666,7 +843,7 @@ function renderTopPriorityZones() {
               </span>
             </div>
             <div class="rain-forecast-text">
-              <span>📡 <strong>เรดาร์ตรวจสภาพ:</strong> ${rain.radarForecast}</span>
+              <span>📡 <strong>เรดาร์ตรวจสภาพ (${profile && profile.radarStation ? profile.radarStation : 'เรดาร์ กทม./นนทบุรี'}):</strong> ${rain.radarForecast}</span>
             </div>
           </div>
         ` : ''}
@@ -726,6 +903,24 @@ function renderTopPriorityZones() {
         <div class="zone-advice-box">
           <strong>⚠️ สภาพเส้นทาง:</strong> ${zone.roadCondition}
           <div style="margin-top: 4px; color: #94a3b8;"><strong>💡 คำแนะนำ:</strong> ${zone.advice}</div>
+        </div>
+
+        <!-- Priority Card Footer: แหล่งข้อมูลและเวลาที่ซิงค์ -->
+        <div class="priority-card-footer">
+          <div class="priority-footer-row">
+            <span class="priority-source-tag">
+              <span>🏛️ <strong>แหล่งข้อมูล:</strong> ${zone.dataSource || 'สำนักการระบายน้ำ กทม. • กรมทางหลวง • เรดาร์ TMD'}</span>
+            </span>
+          </div>
+          <div class="priority-footer-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
+            <span class="priority-sync-tag">
+              <span>⏱️ <strong>ซิงค์ข้อมูลล่าสุด:</strong> ${syncTimeStr}</span>
+            </span>
+            <span class="priority-status-live-tag">
+              <span class="cctv-live-dot" style="width: 5px; height: 5px; background: #34d399;"></span>
+              <span style="color: #34d399; font-size: 0.68rem; font-weight: 500;">โทรมาตรสดทุก 5 นาที</span>
+            </span>
+          </div>
         </div>
       </div>
     `;
@@ -1381,6 +1576,15 @@ function startCctvRenderLoops() {
 
     const modalClock = document.getElementById("modal-cctv-clock");
     if (modalClock) modalClock.innerText = clockStr;
+
+    // Countdown to next 5-min auto sync (300 seconds)
+    const nextSyncSecs = 300 - (Math.floor(now.getTime() / 1000) % 300);
+    const cdMin = Math.floor(nextSyncSecs / 60);
+    const cdSec = String(nextSyncSecs % 60).padStart(2, '0');
+    const cdEl = document.getElementById("priority-sync-countdown");
+    if (cdEl) {
+      cdEl.innerText = `(รอบถัดไปใน ${cdMin}:${cdSec} น.)`;
+    }
   }
 
   updateClockDisplay();
@@ -1472,7 +1676,7 @@ function renderPeaPhotos() {
 
   const reports = dashboardState.data.peaRecentPhotos || [];
   if (countEl) {
-    countEl.innerText = `${reports.length} รายงานสด (แชร์ใหม่ทับของเดิมทุก 5 นาที)`;
+    countEl.innerText = `${reports.length} รายการรายงานสด (อัปเดตแทนที่รายการเก่าทุก 5 นาที)`;
   }
 
   if (reports.length === 0) {
@@ -1523,6 +1727,102 @@ function renderPeaPhotos() {
 // ==========================================================================
 // UPSTREAM WATER SURGE & SEA HIGH TIDE FORECAST (อัปเดตทุก 1 ชม.)
 // ==========================================================================
+function getDynamicConvergencePeakAlert(now = new Date(), totalDischarge = 2210) {
+  const thaiDays = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+  const thaiMonthsFull = [
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+  ];
+  const thaiMonthsShort = [
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+  ];
+
+  const dayName = thaiDays[now.getDay()];
+  const d = now.getDate();
+  const mFull = thaiMonthsFull[now.getMonth()];
+  const mShort = thaiMonthsShort[now.getMonth()];
+  const yBE = now.getFullYear() + 543;
+
+  const fullDateStr = `วัน${dayName}ที่ ${d} ${mFull} ${yBE}`;
+  const shortDateStr = `${d} ${mShort} ${yBE}`;
+
+  const hour = now.getHours();
+  const mins = now.getMinutes();
+
+  const syncHourStr = String(hour).padStart(2, '0') + ':00 น.';
+  const nextHourStr = String((hour + 1) % 24).padStart(2, '0') + ':00 น.';
+  const exactTimeStr = String(hour).padStart(2, '0') + ':' + String(mins).padStart(2, '0') + ' น.';
+  const flowVal = totalDischarge || 2210;
+
+  let phase = "daytime";
+  let statusPillClass = "status-imminent";
+  let statusLabel = "";
+  let timeRange = "";
+  let peakDetail = "";
+  let title = "";
+  let warningText = "";
+
+  if (hour >= 0 && hour < 6) {
+    phase = "night";
+    statusPillClass = "status-watch";
+    statusLabel = "🟡 พ้นช่วงวิกฤตค่ำ • เตรียมรับน้ำหนุนรอบเช้า";
+    timeRange = `รอบถัดไป: 07:30 - 09:45 น. (เช้าวันนี้ ${shortDateStr})`;
+    peakDetail = "ยอดสูงสุดรอบเช้า 08:35 น. (+1.68 ม.รทก.)";
+    title = "เฝ้าระวังช่วงน้ำลงต่ำสุด & เตรียมพร้อมรับน้ำทะเลหนุนรอบเช้า (Pre-Dawn Low Tide Assessment)";
+    warningText = `ขณะนี้ระดับน้ำในแม่น้ำเจ้าพระยาอยู่ในช่วงลดระดับลงตามจังหวะน้ำลง (Low Tide) สถานีสูบน้ำเร่งพร่องน้ำอย่างเต็มที่ คาดการณ์มวลน้ำเหนือ ${flowVal.toLocaleString()} ลบ.ม./วิ จะเริ่มปะทะกับน้ำหนุนรอบเช้าช่วงเวลา 07:30 - 09:45 น. วันนี้ ขอให้ชุมชนริมน้ำตรวจสอบความสูงของแนวกระสอบทราย`;
+  } else if (hour >= 6 && hour < 11) {
+    phase = "morning";
+    const isLivePeak = (hour === 8 || (hour === 7 && mins >= 30) || (hour === 9 && mins <= 45));
+    statusPillClass = isLivePeak ? "status-live" : "status-imminent";
+    statusLabel = isLivePeak ? "🔴 กำลังอยู่ในช่วงน้ำหนุนรอบเช้า (MORNING PEAK IN PROGRESS)" : "⚠️ ช่วงเฝ้าระวังน้ำหนุนรอบเช้า";
+    timeRange = `07:30 - 09:45 น. (เช้าวันนี้ ${shortDateStr})`;
+    peakDetail = "ยอดสูงสุดรอบเช้า 08:35 น. (+1.68 ม.รทก.)";
+    title = "ช่วงเวลาน้ำทะเลหนุนรอบเช้า ปะทะมวลน้ำเหนือไหลหลาก (Morning Convergence Window)";
+    warningText = `มวลน้ำเหนือไหลผ่านสถานีบางไทร ${flowVal.toLocaleString()} ลบ.ม./วิ กำลังปะทะกับน้ำทะเลหนุนรอบเช้าแตะระดับ +1.68 ม.รทก. ส่งผลให้น้ำในแม่น้ำเจ้าพระยาเอ่อปริ่มสันเขื่อนริมน้ำบางจุด ประตูระบายน้ำคลองบางเขนและคลองเปรมประชากรเดินเครื่องสูบน้ำเต็มกำลังเพื่อเร่งระบายน้ำ`;
+  } else if (hour >= 11 && hour < 17) {
+    phase = "daytime";
+    const remHrs = Math.max(1, 18 - hour);
+    statusPillClass = "status-imminent";
+    statusLabel = `⚠️ นับถอยหลังสู่ช่วงวิกฤตสูงสุด (อีกประมาณ ${remHrs} ชั่วโมง)`;
+    timeRange = `18:20 - 21:30 น. (ค่ำวันนี้ ${shortDateStr})`;
+    peakDetail = "ยอดหนุนสูงสุดของวัน 19:48 น. (+1.84 ม.รทก.)";
+    title = "ช่วงเวลาน้ำทะเลหนุนสูงสุดของวัน ปะทะมวลน้ำเหนือไหลหลาก (Daily Convergence Peak)";
+    warningText = `ช่วงบ่ายน้ำทะเลลงต่ำสุดเป็นโอกาสเร่งพร่องน้ำในคลองสายหลัก แต่ต้องเตรียมพร้อมรับมือสูงสุดช่วง 18:20 - 21:30 น. วันนี้ เมื่อมวลน้ำเหนือหลาก ${flowVal.toLocaleString()} ลบ.ม./วิ จะปะทะกับน้ำทะเลหนุนสูงสุดของวันแตะ +1.84 ม.รทก. ชุมชนชินเขต 1-2 ตลาดท่าทราย เคหะท่าทราย และริมคลองสาขาเสี่ยงน้ำเอ่อท่อระบายน้ำ`;
+  } else if (hour >= 17 && hour < 22) {
+    phase = "evening";
+    statusPillClass = "status-live";
+    statusLabel = "🚨 กำลังอยู่ในช่วงวิกฤตหนุนสูงสุด (CONVERGENCE PEAK NOW)";
+    timeRange = `18:20 - 21:30 น. (ค่ำวันนี้ ${shortDateStr})`;
+    peakDetail = "ยอดคลื่นวิกฤตสูงสุด 19:48 น. (+1.84 ม.รทก.)";
+    title = "วิกฤตการณ์น้ำทะเลหนุนสูงสุดของวัน ปะทะมวลน้ำเหนือไหลหลาก (Convergence Peak Alert)";
+    warningText = `มวลน้ำเหนือปริมาณมาก ${flowVal.toLocaleString()} ลบ.ม./วิ กำลังปะทะกับน้ำทะเลหนุนสูงสุดของวัน (+1.84 ม.รทก.) ทำให้การระบายน้ำลงสู่อ่าวไทยชะลอตัวลงอย่างมาก น้ำในแม่น้ำเจ้าพระยายกตัวสูงและอาจดันย้อนเข้าสู่คลองบางเขน คลองเปรมประชากร และคลองบางตลาด ขอให้เจ้าหน้าที่เฝ้าระวังจุดฟันหลอและเดินเครื่องสูบน้ำ 100%`;
+  } else {
+    phase = "post_evening";
+    statusPillClass = "status-passed";
+    statusLabel = "🟢 ผ่านพ้นช่วงวิกฤตสูงสุดของวันนี้แล้ว • อยู่ในช่วงเร่งระบายน้ำ";
+    timeRange = `ผ่านพ้นยอดสูงสุด 19:48 น. แล้ว • รอบถัดไป: 07:30 - 09:45 น. (พรุ่งนี้)`;
+    peakDetail = "รอบถัดไปเช้าวันพรุ่งนี้ (+1.74 ม.รทก.)";
+    title = "ประเมินสถานการณ์หลังพ้นจุดวิกฤตหนุนสูงสุด & เตรียมรับรอบเช้าวันพรุ่งนี้";
+    warningText = `ระดับน้ำทะเลในแม่น้ำเจ้าพระยาเริ่มลดระดับลงหลังเวลา 22:00 น. อุโมงค์ระบายน้ำยักษ์และสถานีสูบน้ำริมแม่น้ำเดินเครื่องเต็มพิกัดเร่งดึงน้ำคั่งค้างในคลองเปรมประชากรและคลองบางเขนลงสู่อ่าวไทย เพื่อเตรียมพร่องน้ำรับมวลน้ำระลอกใหม่ในวันพรุ่งนี้`;
+  }
+
+  return {
+    fullDateStr,
+    shortDateStr,
+    exactTimeStr,
+    syncHourStr,
+    nextHourStr,
+    phase,
+    statusLabel,
+    statusPillClass,
+    timeRange,
+    peakDetail,
+    title,
+    warningText
+  };
+}
+
 function renderSurgeAndTide() {
   const container = document.getElementById("surge-tide-content");
   if (!container) return;
@@ -1555,11 +1855,11 @@ function renderSurgeAndTide() {
 
   const cp = surge.checkpoints || [];
   const tidePeriods = tide.tidePeriods || tide.tideWindows || [];
-  const convergence = tide.convergenceWindow || {
-    timeRange: "18:30 - 21:15 น.",
-    title: "ช่วงเวลาน้ำทะเลหนุนสูงสุด ปะทะมวลน้ำเหนือไหลหลาก (Convergence Peak)",
-    warningText: tide.convergenceAlert || "มวลน้ำเหนือปะทะกับน้ำทะเลหนุนสูงสุด ทำให้น้ำระบายลงอ่าวไทยชะลอตัว"
-  };
+
+  // Dynamic Convergence Peak Alert evaluation per hour
+  const convAlert = getDynamicConvergencePeakAlert(now, totalDischarge);
+  tide.convergenceWindow = convAlert;
+  tide.tideDate = convAlert.shortDateStr;
 
   const dischargePercent = Math.min(100, Math.round((totalDischarge / safeCapacity) * 100));
 
@@ -1603,14 +1903,36 @@ function renderSurgeAndTide() {
         </div>
       </div>
 
-      <!-- Convergence Peak Risk Banner -->
+      <!-- Convergence Peak Risk Banner (Dynamic Hourly Update & Explicit Date/Time) -->
       <div class="convergence-banner">
         <div class="convergence-badge-wrap">
           <span class="convergence-pill">🚨 CONVERGENCE PEAK ALERT</span>
-          <span class="convergence-time">ช่วงเวลาวิกฤต: ${convergence.timeRange}</span>
+          <span class="convergence-status-pill ${convAlert.statusPillClass}">${convAlert.statusLabel}</span>
+          <span class="convergence-datetime-badge">
+            <span class="cal-icon">📅</span> ${convAlert.fullDateStr} • <span class="clock-icon">⏱️</span> เวลาประเมิน: ${convAlert.exactTimeStr}
+          </span>
         </div>
-        <div class="convergence-title">${convergence.title}</div>
-        <div class="convergence-text">${convergence.warningText}</div>
+
+        <div class="convergence-window-box">
+          <div class="convergence-window-header">
+            <span class="cwb-icon">⏳</span>
+            <span class="cwb-label">ช่วงเวลาปะทะวิกฤต:</span>
+            <strong class="cwb-timerange">${convAlert.timeRange}</strong>
+            <span class="cwb-peak-pill">${convAlert.peakDetail}</span>
+          </div>
+        </div>
+
+        <div class="convergence-title">${convAlert.title}</div>
+        <div class="convergence-text">${convAlert.warningText}</div>
+
+        <div class="convergence-footer-meta">
+          <div class="cfm-source">
+            <span class="cfm-icon">📡</span> วิเคราะห์บูรณาการ: <strong>กรมอุทกศาสตร์ กองทัพเรือ × กรมชลประทาน (อัปเดตทุก 1 ชม.)</strong>
+          </div>
+          <div class="cfm-sync">
+            ⏱️ รอบวิเคราะห์: <strong>${convAlert.syncHourStr}</strong> | รอบถัดไป: <strong>${convAlert.nextHourStr}</strong>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1762,10 +2084,15 @@ function renderLiveFloodNews() {
 
   const now = dashboardState.lastUpdated || new Date();
   const currentHour = now.getHours();
-  const lastSyncHour = String(currentHour).padStart(2, '0') + ':00 น.';
-  const nextSyncHour = String((currentHour + 1) % 24).padStart(2, '0') + ':00 น.';
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
+  const currentMinute = now.getMinutes();
+  const syncMinute = currentMinute < 30 ? 0 : 30;
+  const nextSyncMin = currentMinute < 30 ? 30 : 0;
+  const nextSyncHourVal = currentMinute < 30 ? currentHour : (currentHour + 1) % 24;
+
+  const lastSyncStr = `${String(currentHour).padStart(2, '0')}:${String(syncMinute).padStart(2, '0')} น.`;
+  const nextSyncStr = `${String(nextSyncHourVal).padStart(2, '0')}:${String(nextSyncMin).padStart(2, '0')} น.`;
+  const hh = String(currentHour).padStart(2, '0');
+  const mm = String(currentMinute).padStart(2, '0');
 
   let liveCount = 0;
   let recentCount = 0;
@@ -1855,7 +2182,7 @@ function renderLiveFloodNews() {
         <div class="ln-summary-box">
           <div class="ln-summary-title">
             <span>📝 ประเด็นสำคัญและสถานการณ์ล่าสุด (SitRep):</span>
-            <span class="ln-sitrep-tag">รอบ ${lastSyncHour}</span>
+            <span class="ln-sitrep-tag">รอบ ${lastSyncStr}</span>
           </div>
           <ul class="ln-bullets">
             ${activeBullets.map(bullet => `
@@ -1884,12 +2211,12 @@ function renderLiveFloodNews() {
 
   const counterEl = document.getElementById("live-news-counter");
   if (counterEl) {
-    counterEl.innerText = `${liveCount} รายการสดเรียลไทม์ • ${recentCount} รายการสดช่วง 3 ชม. (อัปเดต SitRep ทุก 1 ชม.)`;
+    counterEl.innerText = `${liveCount} รายการสดเรียลไทม์ • ${recentCount} รายการย้อนหลัง 3 ชม. • รวม ${newsList.length} รายการ (หมุนเวียนข้อมูลใหม่แทนที่เก่าทุก 30 นาที)`;
   }
 
   const clockEl = document.getElementById("live-news-clock");
   if (clockEl) {
-    clockEl.innerText = `⏱️ เวลาปัจจุบัน: ${hh}:${mm} น. (รอบอัปเดต SitRep: ${lastSyncHour} | รอบถัดไป: ${nextSyncHour})`;
+    clockEl.innerText = `⏱️ เวลาปัจจุบัน: ${hh}:${mm} น. (รอบซิงค์: ${lastSyncStr} | อัปเดตรายการใหม่ถัดไป: ${nextSyncStr})`;
   }
 }
 
@@ -2009,21 +2336,23 @@ function initApp() {
   try { updateCanalsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updateCanals error:", e); }
   try { updateRoadsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updateRoads error:", e); }
   try { updatePeaReportsDynamicData(dashboardState.lastUpdated); } catch (e) { console.error("updatePeaReports error:", e); }
+  try { updateLiveFloodNewsDynamicData(dashboardState.lastUpdated, true); } catch (e) { console.error("updateLiveNews error:", e); }
   try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
   try { renderDashboard(); } catch (e) { console.error("renderDashboard error:", e); }
   try { startCctvRenderLoops(); } catch (e) { console.error("startCctvRenderLoops error:", e); }
   try { initTrendChart(); } catch (e) { console.warn("Chart init failed (safe to ignore if offline):", e); }
   try { setupAutoRefresh(300); } catch (e) { console.error("setupAutoRefresh error:", e); }
 
-  // 1-Hour Auto-Sync for Live News and Upstream Surge & Sea Tide Forecast
+  // 30-Minute Auto-Sync for Live News (FIFO Rolling Queue 16 รายการ) & Upstream Surge & Sea Tide Forecast
   try {
     setInterval(() => {
       dashboardState.lastUpdated = new Date();
+      updateLiveFloodNewsDynamicData(dashboardState.lastUpdated, true);
       simulateDataFluctuation();
       renderSurgeAndTide();
       renderLiveFloodNews();
-    }, 3600 * 1000);
-  } catch (e) { console.error("hourlyAutoSync error:", e); }
+    }, 1800 * 1000);
+  } catch (e) { console.error("liveNewsAutoSync error:", e); }
 }
 
 if (document.readyState === "loading") {

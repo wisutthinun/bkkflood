@@ -142,11 +142,18 @@
     <section class="priority-section" id="pinned-priority-section">
       <div class="priority-header">
         <div class="priority-title-wrap">
-          <span class="priority-badge">PINNED TOP</span>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span class="priority-badge">PINNED TOP</span>
+            <span class="pea-live-pill" style="background: #0284c7; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 600; color: #fff;">LIVE สดทุก 5 นาที</span>
+            <span class="priority-source-pill">🏛️ แหล่งข้อมูล: สนร.กทม. • ทน.นนทบุรี • กรมทางหลวง • TMD เรดาร์ • กฟภ.</span>
+          </div>
           <h2 class="priority-title">งามวงศ์วาน • ประชาชื่น • แจ้งวัฒนะ • ม.เกษตรศาสตร์ • อ.เมือง นนทบุรี • ชุมชนชินเขต</h2>
+          <div class="priority-subtitle-summary" id="priority-rain-summary" style="font-size: 0.8rem; color: #93c5fd; margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            กำลังเชื่อมต่อเรดาร์ตรวจสภาพฝน...
+          </div>
         </div>
         <div class="priority-sync-pill" id="priority-sync-badge">
-          ⏱️ ข้อมูลสด: <strong id="priority-sync-time">--:--:-- น.</strong> (ซิงค์ทุก 5 นาที)
+          ⏱️ ซิงค์ล่าสุดเมื่อ: <strong id="priority-sync-time">--:--:-- น.</strong> <span id="priority-sync-countdown" style="font-size: 0.72rem; color: #7dd3fc; margin-left: 4px;">(ซิงค์ทุก 5 นาที)</span>
         </div>
       </div>
 
@@ -168,9 +175,6 @@
         <button class="tab-btn" data-tab="pea-photos">
           <span>📢 รายงานรอบ กฟภ. สนง.ใหญ่ (3 ชม.)</span>
         </button>
-        <button class="tab-btn" data-tab="floodhub">
-          <span>🌐 เตือนภัย Google Flood Hub</span>
-        </button>
         <button class="tab-btn" data-tab="canals">
           <span>🛶 ระดับน้ำในคลอง</span>
         </button>
@@ -188,6 +192,9 @@
         </button>
         <button class="tab-btn" data-tab="chart">
           <span>📈 กราฟแนวโน้มระดับน้ำ</span>
+        </button>
+        <button class="tab-btn" data-tab="floodhub">
+          <span>🌐 เตือนภัย Google Flood Hub</span>
         </button>
       </div>
 
@@ -218,48 +225,32 @@
     </div>
 
     <!-- ====================================================================
-         SECTION: GOOGLE FLOOD HUB AI EARLY WARNING & FORECAST
-         ระบบเตือนภัยและพยากรณ์น้ำท่วมล่วงหน้า 7 วัน ด้วย AI (Google Flood Hub)
+         SECTION: RECENT SITUATION REPORTS AROUND PEA HQ (รายงานสถานการณ์ล่าสุดรอบ กฟภ. สำนักงานใหญ่ ภายใน 3 ชม.)
          ==================================================================== -->
-    <div class="section-panel active" id="panel-floodhub">
-      <div class="section-head gfh-section-head">
+    <div class="section-panel active" id="panel-pea-photos">
+      <div class="section-head pea-section-head">
         <div>
-          <div class="gfh-title-badge-wrap">
-            <span class="gfh-brand-badge">
-              <span class="gfh-brand-icon">🌐</span>
-              <strong>Google Flood Hub</strong>
-              <span class="gfh-ai-pill">AI 7-DAY FORECAST</span>
+          <div class="pea-title-badge-wrap">
+            <span class="pea-brand-badge">
+              <span class="pea-brand-icon">⚡</span>
+              <strong>การไฟฟ้าส่วนภูมิภาค (PEA) สำนักงานใหญ่</strong>
+              <span class="pea-live-pill">🔴 REAL-TIME REPORT (3 ชม.)</span>
             </span>
-            <span class="gfh-lead-time">⏱️ คาดการณ์ล่วงหน้า 7 วัน</span>
+            <span class="pea-lead-time" id="pea-sync-time">⏱️ ข้อมูลอัปเดตสด: กำลังซิงค์...</span>
           </div>
-          <h3 class="section-title" style="margin-top: 0.35rem;">🌐 การเตือนภัยและแนวโน้มน้ำท่วมล่วงหน้า (AI Hydrological Forecast)</h3>
+          <h3 class="section-title" style="margin-top: 0.35rem;">📢 รายงานสถานการณ์น้ำท่วมล่าสุดภายใน 3 ชม. บริเวณโดยรอบ กฟภ. สำนักงานใหญ่</h3>
           <div class="section-subtitle">
-            แบบจำลองปัญญาประดิษฐ์และดาวเทียมตรวจวัดลุ่มน้ำเจ้าพระยาตอนล่าง ครอบคลุม กทม., นนทบุรี, ปทุมธานี
+            รายงานสภาพน้ำท่วมขังและผิวทางสดที่มีการแชร์ใหม่ๆ อัปเดตข้อมูลจากแหล่งข่าวใหม่เข้ามาแทนที่รายการเก่าสุดอัตโนมัติทุก 5 นาที (คงรายงานสดต่อเนื่อง 21 จุด) ครอบคลุมพื้นที่รอบ สนง.ใหญ่ กฟภ., ชุมชนชินเขต 1-2, <strong>ซอยประชาชื่น 12</strong>, <strong>ตลาดท่าทราย</strong>, <strong>หมู่บ้านการเคหะท่าทราย</strong>, แยกพงษ์เพชร จากเจ้าหน้าที่ กฟภ., ผู้นำชุมชน, อาสากู้ภัย, ตำรวจจราจร, โรงพยาบาล และประชาชนในพื้นที่
           </div>
         </div>
-        <div class="gfh-header-actions">
-          <a href="https://sites.research.google/floods/" target="_blank" rel="noopener noreferrer" class="btn-gfh-official" title="เปิดดูแผนที่สดบน Google Flood Hub">
-            🌐 เปิดดูบน Google Flood Hub Official ↗
-          </a>
+        <div class="pea-header-actions">
+          <span class="pea-counter-badge" id="pea-photos-count">21 รายการรายงานสด (อัปเดตแทนที่รายการเก่าทุก 5 นาที)</span>
         </div>
       </div>
 
-      <!-- Google Flood Hub Overview AI Banner -->
-      <div class="gfh-overview-card" id="gfh-overview-box">
-        <!-- Rendered dynamically by app.js -->
-      </div>
-
-      <!-- Google Flood Hub Stations AI Forecast Grid -->
-      <div class="gfh-stations-grid" id="gfh-stations-list">
-        <!-- Rendered dynamically by app.js -->
-      </div>
-
-      <!-- Google Flood Hub Methodology Footer Note -->
-      <div class="gfh-footer-note">
-        <div class="gfh-note-icon">💡</div>
-        <div class="gfh-note-text">
-          <strong>เกี่ยวกับ Google Flood Hub:</strong> พัฒนาโดย Google Research ร่วมกับเครือข่ายอุตุนิยมวิทยาโลก โดยใช้โมเดล AI Hydrological Simulation ผสานภาพถ่ายดาวเทียมตรวจวัดปริมาณฝน (ECMWF, Sentinel) และข้อมูลสถานีวัดน้ำจริง สามารถพยากรณ์ระดับน้ำล้นตลิ่งล่วงหน้าได้สูงสุด 7 วัน ช่วยให้ประชาชนและเจ้าหน้าที่เตรียมการป้องกันได้ทันท่วงที
-        </div>
+      <!-- Situation Reports Grid -->
+      <div class="pea-reports-grid" id="pea-photos-grid">
+        <!-- Dynamically rendered by app.js -->
       </div>
     </div>
 
@@ -344,36 +335,6 @@
     </div>
 
     <!-- ====================================================================
-         SECTION: RECENT SITUATION REPORTS AROUND PEA HQ (รายงานสถานการณ์ล่าสุดรอบ กฟภ. สำนักงานใหญ่ ภายใน 3 ชม.)
-         ==================================================================== -->
-    <div class="section-panel active" id="panel-pea-photos">
-      <div class="section-head pea-section-head">
-        <div>
-          <div class="pea-title-badge-wrap">
-            <span class="pea-brand-badge">
-              <span class="pea-brand-icon">⚡</span>
-              <strong>การไฟฟ้าส่วนภูมิภาค (PEA) สำนักงานใหญ่</strong>
-              <span class="pea-live-pill">🔴 REAL-TIME REPORT (3 ชม.)</span>
-            </span>
-            <span class="pea-lead-time" id="pea-sync-time">⏱️ ข้อมูลอัปเดตสด: กำลังซิงค์...</span>
-          </div>
-          <h3 class="section-title" style="margin-top: 0.35rem;">📢 รายงานสถานการณ์น้ำท่วมล่าสุดภายใน 3 ชม. บริเวณโดยรอบ กฟภ. สำนักงานใหญ่</h3>
-          <div class="section-subtitle">
-            รายงานสภาพน้ำท่วมขังและผิวทางสดที่มีการแชร์ใหม่ๆ อัปเดตหมุนเวียนทับของเดิมอัตโนมัติทุก 5 นาที จากเจ้าหน้าที่ กฟภ., เครือข่ายชุมชนชินเขต 1-2, อาสากู้ภัย และประชาชนในพื้นที่
-          </div>
-        </div>
-        <div class="pea-header-actions">
-          <span class="pea-counter-badge" id="pea-photos-count">14 รายงานสด (แชร์ใหม่ทับของเดิมทุก 5 นาที)</span>
-        </div>
-      </div>
-
-      <!-- Situation Reports Grid -->
-      <div class="pea-reports-grid" id="pea-photos-grid">
-        <!-- Dynamically rendered by app.js -->
-      </div>
-    </div>
-
-    <!-- ====================================================================
          SECTION: CCTV VIDEO FEEDS
          ==================================================================== -->
     <div class="section-panel active" id="panel-cctv">
@@ -447,13 +408,13 @@
             <span class="pea-brand-badge" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #f87171;">
               <span class="pea-brand-icon">📺</span>
               <strong>LIVE BROADCASTS & SITREP (3 ชม.)</strong>
-              <span class="pea-live-pill" style="background: #dc2626;">🔴 สด & สรุปย้อนหลัง 3 ชม.</span>
+              <span class="pea-live-pill" style="background: #dc2626;">🔴 สด & สรุปย้อนหลัง 3 ชม. (16 รายการ)</span>
             </span>
             <span class="pea-lead-time" id="live-news-clock">⏱️ เวลาปัจจุบัน: --:-- น.</span>
           </div>
           <h3 class="section-title" style="margin-top: 0.35rem;">📺 รายงานข่าวน้ำท่วม กทม. แบบ Live สด และสรุปสาระสำคัญ (ช่วง 3 ชม. ล่าสุด)</h3>
           <div class="section-subtitle">
-            รวบรวมรายการถ่ายทอดสดและ Live ที่เพิ่งออกอากาศไปในช่วง 3 ชั่วโมงล่าสุด เกาะติดสถานการณ์น้ำเหนือ-น้ำหนุน และสรุปประเด็นสำคัญเร่งด่วน (SitRep) • อัปเดตทุก 1 ชั่วโมง
+            รวบรวมรายการถ่ายทอดสดและ Live ที่เพิ่งออกอากาศไปในช่วง 3 ชั่วโมงล่าสุด เกาะติดสถานการณ์น้ำเหนือ-น้ำหนุน และสรุปประเด็นสำคัญเร่งด่วน (SitRep) รวม 16 รายการ • หมุนเวียนข้อมูลจากแหล่งข่าวใหม่ๆ แทนที่รายการเก่าสุดทุก 30 นาที
           </div>
         </div>
         <div class="pea-header-actions">
@@ -464,6 +425,52 @@
       <!-- Live Broadcast Cards Grid -->
       <div class="live-news-grid" id="live-news-grid">
         <!-- Rendered dynamically by app.js -->
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION: GOOGLE FLOOD HUB AI EARLY WARNING & FORECAST
+         ระบบเตือนภัยและพยากรณ์น้ำท่วมล่วงหน้า 7 วัน ด้วย AI (Google Flood Hub)
+         ==================================================================== -->
+    <div class="section-panel active" id="panel-floodhub">
+      <div class="section-head gfh-section-head">
+        <div>
+          <div class="gfh-title-badge-wrap">
+            <span class="gfh-brand-badge">
+              <span class="gfh-brand-icon">🌐</span>
+              <strong>Google Flood Hub</strong>
+              <span class="gfh-ai-pill">AI 7-DAY FORECAST</span>
+            </span>
+            <span class="gfh-lead-time">⏱️ คาดการณ์ล่วงหน้า 7 วัน</span>
+          </div>
+          <h3 class="section-title" style="margin-top: 0.35rem;">🌐 การเตือนภัยและแนวโน้มน้ำท่วมล่วงหน้า (AI Hydrological Forecast)</h3>
+          <div class="section-subtitle">
+            แบบจำลองปัญญาประดิษฐ์และดาวเทียมตรวจวัดลุ่มน้ำเจ้าพระยาตอนล่าง ครอบคลุม กทม., นนทบุรี, ปทุมธานี
+          </div>
+        </div>
+        <div class="gfh-header-actions">
+          <a href="https://sites.research.google/floods/" target="_blank" rel="noopener noreferrer" class="btn-gfh-official" title="เปิดดูแผนที่สดบน Google Flood Hub">
+            🌐 เปิดดูบน Google Flood Hub Official ↗
+          </a>
+        </div>
+      </div>
+
+      <!-- Google Flood Hub Overview AI Banner -->
+      <div class="gfh-overview-card" id="gfh-overview-box">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- Google Flood Hub Stations AI Forecast Grid -->
+      <div class="gfh-stations-grid" id="gfh-stations-list">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+
+      <!-- Google Flood Hub Methodology Footer Note -->
+      <div class="gfh-footer-note">
+        <div class="gfh-note-icon">💡</div>
+        <div class="gfh-note-text">
+          <strong>เกี่ยวกับ Google Flood Hub:</strong> พัฒนาโดย Google Research ร่วมกับเครือข่ายอุตุนิยมวิทยาโลก โดยใช้โมเดล AI Hydrological Simulation ผสานภาพถ่ายดาวเทียมตรวจวัดปริมาณฝน (ECMWF, Sentinel) และข้อมูลสถานีวัดน้ำจริง สามารถพยากรณ์ระดับน้ำล้นตลิ่งล่วงหน้าได้สูงสุด 7 วัน ช่วยให้ประชาชนและเจ้าหน้าที่เตรียมการป้องกันได้ทันท่วงที
+        </div>
       </div>
     </div>
 
