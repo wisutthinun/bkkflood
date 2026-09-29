@@ -475,26 +475,102 @@ function formatPeaSharedTime(baseTime, minsAgo) {
   return `${hh}:${mm} น.`;
 }
 
-function buildPeaReportItem(item, minsAgo, baseTime, uniqueSeed) {
-  const depthDelta = Math.floor(Math.random() * 5) - 2; // -2 to +2 cm
-  const depth = Math.max(2, (item.baseWaterDepthCm || 12) + depthDelta);
+// --------------------------------------------------------------------------
+// Natural Language Processing: ประมวลผลระดับน้ำและสภาพการสัญจรจากข้อความที่คนแชร์จริง
+// (สกัดจากข้อความภาษาไทย เช่น ตัวเลขระบุชัดเจน, วลีเปรียบเทียบระดับน้ำ, และคำบอกเล่า)
+// --------------------------------------------------------------------------
+function parseWaterLevelFromText(text, fallbackDepth = 10) {
+  if (!text || typeof text !== 'string') {
+    return { depth: fallbackDepth, severity: "moderate", severityLabel: "น้ำท่วมรอระบาย", extractedFrom: "ค่ามาตรฐาน" };
+  }
 
-  let sev = item.severity;
-  let sevLabel = item.severityLabel;
+  const cleanText = text.trim();
+
+  // 1. ตรวจสอบตัวเลขระบุชัดเจนในข้อความก่อน (เช่น 15 ซม., 18-20 ซม., 14 cm)
+  // เพื่อไม่ให้สับสนกรณีมีคำว่า "ผิวทางแห้งเป็นส่วนใหญ่ แต่มีน้ำขัง 5-7 ซม."
+  const rangeMatch = cleanText.match(/(\d+)\s*[-–ถึง]\s*(\d+)\s*(?:ซม\.?|เซนติเมตร|cm)/i);
+  if (rangeMatch) {
+    const minVal = parseInt(rangeMatch[1], 10);
+    const maxVal = parseInt(rangeMatch[2], 10);
+    const avgVal = Math.round((minVal + maxVal) / 2);
+    return calculateSeverityFromDepth(avgVal, `ข้อความระบุ "${rangeMatch[0]}"`);
+  }
+
+  const exactMatch = cleanText.match(/(\d+)\s*(?:ซม\.?|เซนติเมตร|cm)/i);
+  if (exactMatch) {
+    const depthVal = parseInt(exactMatch[1], 10);
+    return calculateSeverityFromDepth(depthVal, `ข้อความระบุ "${exactMatch[0]}"`);
+  }
+
+  // 2. ตรวจสอบกรณีถนนแห้ง / น้ำลดหมดแล้ว / สัญจรปกติ (เมื่อไม่มีการระบุตัวเลขความลึก)
+  const dryKeywords = ["แห้งหมดแล้ว", "แห้งสนิท", "ผิวทางแห้งสนิท", "น้ำแห้งหมด", "น้ำลดหมด", "ไม่มีน้ำท่วม", "ไม่มีน้ำขัง", "แห้งปกติ", "แห้งแล้ว"];
+  for (const kw of dryKeywords) {
+    if (cleanText.includes(kw)) {
+      return {
+        depth: 0,
+        severity: "dry",
+        severityLabel: "ผิวทางแห้งปกติ",
+        extractedFrom: `ข้อความระบุ "${kw}"`
+      };
+    }
+  }
+
+  // 3. ตรวจสอบคำเปรียบเทียบสรีระหรือสิ่งแวดล้อมที่คนไทยมักแชร์
+  if (cleanText.includes("มิดล้อ") || cleanText.includes("ท่วมหัวเข่า") || cleanText.includes("ท่วมครึ่งคัน") || cleanText.includes("มิดคัน") || cleanText.includes("ท่วมเอว")) {
+    return calculateSeverityFromDepth(35, "ข้อความระบุเปรียบเทียบระดับสูงวิกฤต");
+  } else if (cleanText.includes("ครึ่งล้อ") || cleanText.includes("มิดฟุตปาธ") || cleanText.includes("มิดทางเท้า") || cleanText.includes("ท่วมเข้าท่อไอเสีย")) {
+    return calculateSeverityFromDepth(22, "ข้อความระบุระดับครึ่งล้อ/มิดทางเท้า");
+  } else if (cleanText.includes("เสมอทางเท้า") || cleanText.includes("เสมอขอบทางเท้า") || cleanText.includes("ท่วมแข้ง") || cleanText.includes("ท่วมครึ่งแข้ง")) {
+    return calculateSeverityFromDepth(14, "ข้อความระบุระดับเสมอทางเท้า/ครึ่งแข้ง");
+  } else if (cleanText.includes("ปริ่มฟุตปาธ") || cleanText.includes("ปริ่มขอบทาง") || cleanText.includes("ท่วมตาตุ่ม") || cleanText.includes("ขังขอบคันหิน") || cleanText.includes("น้ำรอระบายเล็กน้อย")) {
+    return calculateSeverityFromDepth(7, "ข้อความระบุระดับปริ่มขอบทาง/ตาตุ่ม");
+  }
+
+  // 4. กรณีไม่มีระบุเจาะจง ให้ใช้ค่าเดิมที่ผู้โพสต์รายงานไว้โดยไม่สุ่ม
+  return calculateSeverityFromDepth(fallbackDepth, "ถอดความจากรายงานต้นทาง");
+}
+
+function calculateSeverityFromDepth(depth, extractedFrom) {
+  let severity = "minor";
+  let severityLabel = "น้ำปริ่มขอบทาง";
+
+  if (depth === 0) {
+    severity = "dry";
+    severityLabel = "ผิวทางแห้งปกติ";
+  } else if (depth >= 20) {
+    severity = "critical";
+    severityLabel = "น้ำท่วมสูงวิกฤต";
+  } else if (depth >= 12) {
+    severity = "moderate";
+    severityLabel = "น้ำท่วมผิวทางรอระบาย";
+  } else {
+    severity = "minor";
+    severityLabel = "น้ำปริ่มขอบทาง";
+  }
+
+  return { depth, severity, severityLabel, extractedFrom };
+}
+
+function buildPeaReportItem(item, minsAgo, baseTime, uniqueSeed) {
+  // สกัดระดับน้ำและความรุนแรงโดยตรงจากข้อความรายละเอียด (description) และหัวข้อที่คนแชร์
+  const parsed = parseWaterLevelFromText(
+    (item.description || '') + ' ' + (item.title || '') + ' ' + (item.severityLabel || ''),
+    item.baseWaterDepthCm || 10
+  );
+
+  const depth = parsed.depth;
+  const sev = parsed.severity;
+  const sevLabel = parsed.severityLabel;
   let pass = item.passable;
 
-  if (depth >= 20) {
-    sev = "critical";
-    sevLabel = "น้ำท่วมสูง";
-    pass = "รถเล็กหลีกเลี่ยงเด็ดขาด รถยกสูงผ่านได้ชะลอตัว";
+  if (depth === 0) {
+    pass = "ผิวทางแห้ง สัญจรได้คล่องตัวตามปกติ 100%";
+  } else if (depth >= 20) {
+    pass = item.passable || "รถเล็กหลีกเลี่ยงเด็ดขาด รถยกสูงผ่านได้ชะลอตัว";
   } else if (depth >= 12) {
-    sev = "moderate";
-    sevLabel = "น้ำท่วมผิวทางรอระบาย";
-    pass = "รถผ่านได้ ชะลอความเร็ว ระวังคลื่นน้ำ";
+    pass = item.passable || "รถผ่านได้ ชะลอความเร็ว ระวังคลื่นน้ำ";
   } else {
-    sev = "minor";
-    sevLabel = "น้ำปริ่มขอบทาง";
-    pass = "สัญจรได้คล่องตัวตามปกติ";
+    pass = item.passable || "สัญจรได้คล่องตัวตามปกติ";
   }
 
   return {
@@ -511,7 +587,8 @@ function buildPeaReportItem(item, minsAgo, baseTime, uniqueSeed) {
     severityLabel: sevLabel,
     passable: pass,
     description: item.description,
-    source: item.source
+    source: item.source,
+    extractedFrom: parsed.extractedFrom
   };
 }
 
@@ -536,6 +613,20 @@ function updatePeaReportsDynamicData(baseTime = new Date()) {
     });
     currentReports.sort((a, b) => a.minutesAgo - b.minutesAgo);
   } else {
+    // อัปเดตการวิเคราะห์ระดับน้ำจากข้อความของรายการเดิมที่มีอยู่ให้แม่นยำตรงกับ NLP เสมอ
+    currentReports.forEach(r => {
+      if (!r.extractedFrom) {
+        const parsed = parseWaterLevelFromText(
+          (r.description || '') + ' ' + (r.title || '') + ' ' + (r.severityLabel || ''),
+          r.waterDepthCm || 10
+        );
+        r.waterDepthCm = parsed.depth;
+        r.severity = parsed.severity;
+        r.severityLabel = parsed.severityLabel;
+        r.extractedFrom = parsed.extractedFrom;
+      }
+    });
+
     // 1. ตรวจสอบแหล่งข้อมูลและหัวข้อที่แสดงอยู่ด้านบน เพื่อดึงข้อมูลจาก Source ใหม่ๆ ที่ยังไม่ซ้ำ
     const topRecentSources = new Set(currentReports.slice(0, 10).map(r => r.source));
     const topRecentTitles = new Set(currentReports.slice(0, 10).map(r => r.title));
@@ -1819,6 +1910,11 @@ function renderPeaPhotos() {
     let badgeClass = "minor";
     if (r.severity === "critical") badgeClass = "critical";
     else if (r.severity === "moderate") badgeClass = "moderate";
+    else if (r.severity === "dry") badgeClass = "dry";
+
+    const badgeLabel = r.waterDepthCm === 0 
+      ? `🟢 ผิวทางแห้งสนิท (0 ซม.)` 
+      : `💧 ระดับน้ำ ${r.waterDepthCm} ซม. (${r.severityLabel})`;
 
     return `
       <div class="pea-report-card">
@@ -1826,8 +1922,8 @@ function renderPeaPhotos() {
           <span class="pea-report-time">
             ⏱️ <strong>${r.timeAgo}</strong> (แชร์เมื่อ ${r.sharedTime})
           </span>
-          <span class="pea-report-badge ${badgeClass}">
-            💧 ระดับน้ำ ${r.waterDepthCm} ซม. (${r.severityLabel})
+          <span class="pea-report-badge ${badgeClass}" title="${r.extractedFrom ? `วิเคราะห์จาก: ${r.extractedFrom}` : 'สกัดจากข้อความแชร์จริง'}">
+            ${badgeLabel}
           </span>
         </div>
         <div>

@@ -2096,6 +2096,10 @@ body {
   background: rgba(16, 185, 129, 0.92);
 }
 
+.pea-report-badge.dry {
+  background: rgba(14, 165, 233, 0.92);
+}
+
 .pea-report-title {
   font-size: 1.02rem;
   font-weight: 700;
